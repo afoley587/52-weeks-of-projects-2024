@@ -650,5 +650,5 @@ main.Blockchain{
 
 Let's put some image's side-by-side so its a bit easier to see:
 ![Connection](./images/connection.png)
-![Messages](./images/messages.png)
+![Messages](./images/message.png)
 ![Demo](./images/demo.gif)
