@@ -652,3 +652,5 @@ Let's put some image's side-by-side so its a bit easier to see:
 ![Connection](./images/connection.png)
 ![Messages](./images/message.png)
 ![Demo](./images/demo.gif)
+
+If you want to peruse my code, please do! It's [here](https://github.com/afoley587/52-weeks-of-projects-2023/tree/main/01-simple-p2p-blockchain) on GitHub.
