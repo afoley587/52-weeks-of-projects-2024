@@ -1,4 +1,4 @@
-# I Built A Peer 2 Peer Blockchain To Help Learn Golang
+# I Built A Peer 2 Peer Blockchain From Scratch. 'Twas Fun
 I'm newish to golang. I'm very new to blockchain. Let's combine the
 two and learn something cool. In this article, I'll be building
 a Peer-to-peer blockchain system. In the end, we will be able to watch
