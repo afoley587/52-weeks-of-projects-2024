@@ -10,6 +10,8 @@ from langchain.prompts import (
 from langchain.schema import AIMessage, HumanMessage, SystemMessage
 from loguru import logger
 
+from vacatify.schemas import Vacation
+
 vacations = {}
 
 
@@ -27,6 +29,7 @@ async def generate_vacation_idea_chain(
 
     My budget is {budget} dollars.
     """
+    vacations[id] = Vacation(id=id, completed=False, idea="")
 
     system_message_prompt = SystemMessagePromptTemplate.from_template(system_template)
     human_template = "{travel_request}"
@@ -41,5 +44,5 @@ async def generate_vacation_idea_chain(
         travel_request="build me an itinerary",
     ).to_messages()
     result = chat(request)
-    vacations[id] = result.content
+    vacations[id].idea = result.content
     logger.info(f"Completed idea generation for {id}")

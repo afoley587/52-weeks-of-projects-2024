@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Request, BackgroundTasks
+from fastapi import APIRouter, Request, BackgroundTasks, HTTPException
 
 from vacatify.schemas import (
     GenerateVacationIdeaResponse,
@@ -43,11 +43,15 @@ async def generate_vacation(
     "/{id}",
     summary="Get the generated a vacation idea.",
     responses={
-        201: {"description": "Successfully initiated task."},
+        200: {"description": "Successfully fetched vacation."},
+        404: {"description": "Vacation not found."},
     },
 )
 async def get_vacation(r: Request, id: uuid.UUID) -> GetVacationIdeaResponse:
     """Returns the vacation generation for you."""
     if id in vacations:
-        return GetVacationIdeaResponse(id=id, completed=True, idea=vacations[id])
-    return GetVacationIdeaResponse(id=id, completed=False, idea="str")
+        vacay = vacations[id]
+        return GetVacationIdeaResponse(
+            id=vacay.id, completed=vacay.completed, idea=vacay.idea
+        )
+    raise HTTPException(status_code=404, detail="ID not found")

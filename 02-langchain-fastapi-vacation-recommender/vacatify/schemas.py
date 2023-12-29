@@ -18,3 +18,7 @@ class GenerateVacationIdeaRequest(BaseModel):
     favorite_season: str = Field(description="Your favorite season")
     hobbies: List[str] = Field(description="The hobbies you enjoy")
     budget: int = Field(description="The budget for your vacation")
+
+
+class Vacation(GenerateVacationIdeaResponse):
+    idea: str = Field(description="The generated idea")
