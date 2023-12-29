@@ -1,5 +1,7 @@
 # Hosting Langchain With FastAPI - Vacation Planner Project
 
+![thumbnail](./images/thumbnail.png)
+
 Large language models, like ChatGPT, Llama, etc., have taken
 the world by storm over the past 12 months. If you don't believe me,
 let's take a look at how long it took ChatGPT to get to 1 million 
