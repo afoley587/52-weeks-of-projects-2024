@@ -41,7 +41,7 @@ async def generate_vacation_idea_chain(
         season=season,
         budget=budget,
         hobbies=hobbies,
-        travel_request="build me an itinerary",
+        travel_request="write a travel itinerary for me",
     ).to_messages()
     result = chat(request)
     vacations[id].idea = result.content
