@@ -12,5 +12,10 @@ from fastapi import FastAPI
 
 from vacatify.routes.vacation import vacation_router
 
+"""
+First, we instantiate a new application and we just
+attach the router to it. All of the `/vacation/` endpoints
+will be automatically added to our app.
+"""
 app = FastAPI()
 app.include_router(vacation_router)

@@ -20,11 +20,14 @@ The GenerateVacationIdeaResponse reflects this with two fields:
 2. A completed field which tells the user whether the idea generation
     is finished or not.
 """
+
+
 class GenerateVacationIdeaResponse(BaseModel):
     id: uuid.UUID = Field(description="ID Of the generated idea")
     completed: bool = Field(
         description="Flag indicating if the generation was completed"
     )
+
 
 """
 The GetVacationIdeaResponse is what we will return to a 
@@ -35,6 +38,8 @@ The GetVacationIdeaResponse has the same fields as GenerateVacationIdeaResponse,
 but adds an idea field which is what the LLM will fill out when 
 the generation is completed.
 """
+
+
 class GetVacationIdeaResponse(GenerateVacationIdeaResponse):
     idea: str = Field(description="The generated idea")
 
@@ -46,6 +51,8 @@ We will expect them to tell us their favorite season,
 any hobbies they may have, and what their vacation budget is.
 We can feed these in to the LLM down the line.
 """
+
+
 class GenerateVacationIdeaRequest(BaseModel):
     favorite_season: str = Field(description="Your favorite season")
     hobbies: List[str] = Field(description="The hobbies you enjoy")
@@ -53,10 +60,12 @@ class GenerateVacationIdeaRequest(BaseModel):
 
 
 """
-The Vacation object will more or less be a data object for us.
+The Vacation object will more or less be a data class for us.
 It is identical to GetVacationIdeaResponse, but I sometimes
 find it useful to have separate models for separate portions
 of the stack so code is easier to maintain/modify later.
 """
+
+
 class Vacation(GenerateVacationIdeaResponse):
     idea: str = Field(description="The generated idea")
