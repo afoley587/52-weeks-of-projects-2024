@@ -43,6 +43,9 @@ say "hey client, the work has started. Check back later :)"
 So, let's look more in depth at `generate_vacation()`. First, 
 we generate a UUID for the idea. Then, we submit the chain
 with all of the parameters from our user to our background task.
+The observant reader will see the function `generate_vacation_idea_chain`.
+This is the function that will run langchain and update our vacation
+database. We will talk in more depth about it in a following section.
 Finally, we return the response with the ID and the completed 
 flag set to false.
 """

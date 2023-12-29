@@ -5,8 +5,8 @@ poetry run uvicorn vacatify.main:app --reload
 
 Example Curls:
 
-curl -X POST -H"Content-type: application/json" -d'{"favorite_season": "summer", "hobbies": ["this","that"], "budget":10}' http://localhost:8000/vacation/
-curl -X GET -H"Content-type: application/json" http://localhost:8000/vacation/83a85995-fd55-4eeb-8526-c23c2468a641
+curl -X POST -H"Content-type: application/json" -d'{"favorite_season": "summer", "hobbies": ["surfing","running"], "budget":1000}' http://localhost:8000/vacation/
+curl -X GET -H"Content-type: application/json" http://localhost:8000/vacation/cfc8c891-6826-4320-a652-bd6febd9fd7b
 """
 from fastapi import FastAPI
 
