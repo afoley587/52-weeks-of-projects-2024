@@ -1,5 +1,6 @@
 package main
 
+// HELPFUL REFERENCES FOR ANYONE FOLLOWING ALONG
 // https://blog.logrocket.com/build-blockchain-with-go/
 // https://github.com/libp2p/go-libp2p/blob/master/examples/chat/README.md
 // https://mycoralhealth.medium.com/code-a-simple-p2p-blockchain-in-go-46662601f417
