@@ -7,43 +7,60 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/exec"
 	"syscall"
 	"unsafe"
 
-	"github.com/creack/pty"
 	"github.com/gliderlabs/ssh"
+	"golang.org/x/crypto/ssh/terminal"
 )
+
+var sessions []io.Writer
 
 func setWinsize(f *os.File, w, h int) {
 	syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), uintptr(syscall.TIOCSWINSZ),
 		uintptr(unsafe.Pointer(&struct{ h, w, x, y uint16 }{uint16(h), uint16(w), 0, 0})))
 }
 
+func broadcast(m string) {
+	for _, s := range sessions {
+		io.WriteString(s, m)
+	}
+}
+
+func welcome(s ssh.Session) {
+	broadcast(fmt.Sprintln("Welcome, ", s.User()))
+}
+
+func chat(s ssh.Session) {
+	term := terminal.NewTerminal(s, fmt.Sprintf("%s > ", s.User()))
+	for {
+		// get user input
+		line, err := term.ReadLine()
+		if err != nil {
+			break
+		}
+
+		if len(line) > 0 {
+			if string(line[0]) == "/" {
+				switch line {
+				case "/exit":
+					return
+				case "/help":
+					term.Write([]byte("hey"))
+				default:
+					term.Write([]byte("hey"))
+				}
+				continue
+			}
+		}
+	}
+}
+
 func main() {
 	ssh.Handle(func(s ssh.Session) {
-		cmd := exec.Command("top")
-		ptyReq, winCh, isPty := s.Pty()
-		if isPty {
-			cmd.Env = append(cmd.Env, fmt.Sprintf("TERM=%s", ptyReq.Term))
-			f, err := pty.Start(cmd)
-			if err != nil {
-				panic(err)
-			}
-			go func() {
-				for win := range winCh {
-					setWinsize(f, win.Width, win.Height)
-				}
-			}()
-			go func() {
-				io.Copy(f, s) // stdin
-			}()
-			io.Copy(s, f) // stdout
-			cmd.Wait()
-		} else {
-			io.WriteString(s, "No PTY requested.\n")
-			s.Exit(1)
-		}
+		sessions = append(sessions, s)
+		welcome(s)
+		chat(s)
 	})
 
 	log.Println("starting ssh server on port 2222...")

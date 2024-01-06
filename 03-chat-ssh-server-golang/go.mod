@@ -8,4 +8,5 @@ require (
 	github.com/gliderlabs/ssh v0.3.6 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/term v0.15.0 // indirect
 )
