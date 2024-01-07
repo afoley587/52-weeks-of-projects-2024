@@ -20,4 +20,4 @@
 # Go workspace file
 go.work
 
-./03-chat-ssh-server-golang
+03-chat-ssh-server-golang
