@@ -1,35 +1,21 @@
 package main
 
+// ssh -o StrictHostKeyChecking=no -P 2222 localhost
 // example taken from https://github.com/gliderlabs/ssh/blob/master/_examples/ssh-pty/pty.go
 // as a placeholder
 import (
 	"fmt"
-	"io"
 	"log"
-	"os"
-	"syscall"
-	"unsafe"
+	"regexp"
+	"strings"
 
+	"github.com/afoley587/52-weeks-of-projects/03-chat-ssh-server-golang/rooms"
 	"github.com/gliderlabs/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-var sessions []io.Writer
-
-func setWinsize(f *os.File, w, h int) {
-	syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), uintptr(syscall.TIOCSWINSZ),
-		uintptr(unsafe.Pointer(&struct{ h, w, x, y uint16 }{uint16(h), uint16(w), 0, 0})))
-}
-
-func broadcast(m string) {
-	for _, s := range sessions {
-		io.WriteString(s, m)
-	}
-}
-
-func welcome(s ssh.Session) {
-	broadcast(fmt.Sprintln("Welcome, ", s.User()))
-}
+var sessions map[ssh.Session]*rooms.Room
+var availableRooms []*rooms.Room
 
 func chat(s ssh.Session) {
 	term := terminal.NewTerminal(s, fmt.Sprintf("%s > ", s.User()))
@@ -40,26 +26,49 @@ func chat(s ssh.Session) {
 			break
 		}
 
+		var commandPat = regexp.MustCompile(`^/enter.*`)
 		if len(line) > 0 {
 			if string(line[0]) == "/" {
-				switch line {
-				case "/exit":
+				switch {
+				case line == "/exit":
 					return
-				case "/help":
-					term.Write([]byte("hey"))
+				case line == "/list":
+					for _, r := range availableRooms {
+						term.Write([]byte(r.Name + "\n"))
+					}
+				case commandPat.MatchString(string(line)):
+					log.Println("In /enter")
+					toEnter := strings.Split(line, "/enter ")[1]
+					for _, r := range availableRooms {
+						if toEnter == r.Name {
+							log.Println("Enterring Room...")
+							r.Enter(s)
+							sessions[s] = r
+							log.Println(sessions)
+						}
+					}
+
+				case line == "/help":
+					term.Write([]byte("hey\n"))
 				default:
-					term.Write([]byte("hey"))
+					term.Write([]byte("hey\n"))
 				}
 				continue
+			} else {
+				sessions[s].SendMessage(line)
 			}
 		}
 	}
 }
 
 func main() {
+	availableRooms = []*rooms.Room{
+		&rooms.Room{Name: "Room_A"},
+		&rooms.Room{Name: "Room_B"},
+		&rooms.Room{Name: "Room_C"},
+	}
+	sessions = make(map[ssh.Session]*rooms.Room)
 	ssh.Handle(func(s ssh.Session) {
-		sessions = append(sessions, s)
-		welcome(s)
 		chat(s)
 	})
 
