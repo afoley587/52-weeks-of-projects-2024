@@ -1,33 +1,48 @@
 package rooms
 
 import (
-	"io"
-
 	"github.com/gliderlabs/ssh"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type Room struct {
-	Name     string
-	History  []string
-	Sessions []ssh.Session
+	Name    string
+	History []Message
+	Users   []User
 }
 
-func send(sess ssh.Session, message string) {
-	message = message + "\n"
-	io.WriteString(sess, message)
+type User struct {
+	Session  ssh.Session
+	Terminal *terminal.Terminal
 }
 
-func (r *Room) SendMessage(message string) {
-	r.History = append(r.History, message)
-	for _, s := range r.Sessions {
-		send(s, message)
+type Message struct {
+	From    string
+	Message string
+}
+
+func send(u User, m Message) {
+	raw := m.From + "> " + m.Message + "\n"
+	u.Terminal.Write([]byte(raw))
+}
+
+func (r *Room) SendMessage(from, message string) {
+
+	messageObj := Message{From: from, Message: message}
+	r.History = append(r.History, messageObj)
+	for _, u := range r.Users {
+		if (u.Session.User()) != from {
+			send(u, messageObj)
+		}
 	}
 }
 
-func (r *Room) Enter(sess ssh.Session) {
-	r.Sessions = append(r.Sessions, sess)
-	send(sess, "Welcome To My Room")
+func (r *Room) Enter(sess ssh.Session, term *terminal.Terminal) {
+	u := User{Session: sess, Terminal: term}
+	r.Users = append(r.Users, u)
+	entryMsg := Message{From: r.Name, Message: "Welcome to my room!"}
+	send(u, entryMsg)
 	for _, m := range r.History {
-		send(sess, m)
+		send(u, m)
 	}
 }

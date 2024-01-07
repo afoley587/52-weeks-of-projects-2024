@@ -1,8 +1,7 @@
 package main
 
-// ssh -o StrictHostKeyChecking=no -P 2222 localhost
-// example taken from https://github.com/gliderlabs/ssh/blob/master/_examples/ssh-pty/pty.go
-// as a placeholder
+// ssh -o "StrictHostKeyChecking=no" -p 2222 alex@127.0.0.1
+
 import (
 	"fmt"
 	"log"
@@ -14,48 +13,78 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 )
 
-var sessions map[ssh.Session]*rooms.Room
-var availableRooms []*rooms.Room
+var (
+	sessions       map[ssh.Session]*rooms.Room
+	availableRooms []*rooms.Room
+	enterCmd       = regexp.MustCompile(`^/enter.*`)
+	helpCmd        = regexp.MustCompile(`^/help.*`)
+	exitCmd        = regexp.MustCompile(`^/exit.*`)
+	listCmd        = regexp.MustCompile(`^/list.*`)
+)
+
+func helpMsg() string {
+	return `
+Hello and welcome to the chat server! Please use
+one of the following commands:
+	1. /list: To list available rooms
+	2. /enter <room>: To enter a room
+	3. /exit: To leave the server
+	4. /help: To display this message
+`
+}
+
+func filter[T any](s []T, cond func(t T) bool) []T {
+	res := []T{}
+	for _, v := range s {
+		if cond(v) {
+			res = append(res, v)
+		}
+	}
+	return res
+}
+
+func listRooms() string {
+	var sb strings.Builder
+	for _, r := range availableRooms {
+		sb.WriteString(r.Name + "\n")
+	}
+	return sb.String()
+}
 
 func chat(s ssh.Session) {
 	term := terminal.NewTerminal(s, fmt.Sprintf("%s > ", s.User()))
 	for {
-		// get user input
 		line, err := term.ReadLine()
 		if err != nil {
 			break
 		}
 
-		var commandPat = regexp.MustCompile(`^/enter.*`)
 		if len(line) > 0 {
 			if string(line[0]) == "/" {
 				switch {
-				case line == "/exit":
+				case exitCmd.MatchString(string(line)):
 					return
-				case line == "/list":
-					for _, r := range availableRooms {
-						term.Write([]byte(r.Name + "\n"))
+				case listCmd.MatchString(string(line)):
+					term.Write([]byte(listRooms()))
+				case enterCmd.MatchString(string(line)):
+					toEnter := strings.Split(line, " ")[1]
+					matching := filter(availableRooms, func(r *rooms.Room) bool {
+						return toEnter == r.Name
+					})
+					if len(matching) == 0 {
+						term.Write([]byte("Invalid Room!\n"))
+					} else {
+						r := matching[0]
+						r.Enter(s, term)
+						sessions[s] = r
 					}
-				case commandPat.MatchString(string(line)):
-					log.Println("In /enter")
-					toEnter := strings.Split(line, "/enter ")[1]
-					for _, r := range availableRooms {
-						if toEnter == r.Name {
-							log.Println("Enterring Room...")
-							r.Enter(s)
-							sessions[s] = r
-							log.Println(sessions)
-						}
-					}
-
-				case line == "/help":
-					term.Write([]byte("hey\n"))
+				case helpCmd.MatchString(string(line)):
+					term.Write([]byte(helpMsg()))
 				default:
-					term.Write([]byte("hey\n"))
+					term.Write([]byte((helpMsg())))
 				}
-				continue
 			} else {
-				sessions[s].SendMessage(line)
+				sessions[s].SendMessage(s.User(), line)
 			}
 		}
 	}
@@ -63,9 +92,9 @@ func chat(s ssh.Session) {
 
 func main() {
 	availableRooms = []*rooms.Room{
-		&rooms.Room{Name: "Room_A"},
-		&rooms.Room{Name: "Room_B"},
-		&rooms.Room{Name: "Room_C"},
+		&rooms.Room{Name: "a"},
+		&rooms.Room{Name: "b"},
+		&rooms.Room{Name: "c"},
 	}
 	sessions = make(map[ssh.Session]*rooms.Room)
 	ssh.Handle(func(s ssh.Session) {
