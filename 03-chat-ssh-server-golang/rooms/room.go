@@ -46,3 +46,18 @@ func (r *Room) Enter(sess ssh.Session, term *terminal.Terminal) {
 		send(u, m)
 	}
 }
+
+func (r *Room) Leave(sess ssh.Session) {
+	r.Users = removeByUsername(r.Users, sess.User())
+}
+
+func removeByUsername(s []User, n string) []User {
+	var index int
+	for i, u := range s {
+		if u.Session.User() == n {
+			index = i
+			break
+		}
+	}
+	return append(s[:index], s[index+1:]...)
+}

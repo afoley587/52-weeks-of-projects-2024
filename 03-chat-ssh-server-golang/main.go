@@ -74,6 +74,9 @@ func chat(s ssh.Session) {
 					if len(matching) == 0 {
 						term.Write([]byte("Invalid Room!\n"))
 					} else {
+						if sessions[s] != nil {
+							sessions[s].Leave(s)
+						}
 						r := matching[0]
 						r.Enter(s, term)
 						sessions[s] = r
