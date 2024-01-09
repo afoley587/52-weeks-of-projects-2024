@@ -154,5 +154,121 @@ let's take a look at their corresponding functions. We will
 skip `/enter <room>` and `/exit` for now and go through 
 `/help` and `/list`
 
-We will use this help message when a user inputs an
-unknown /command or if they type /help.
+We will use this `helpMsg` function when a user inputs an
+unknown `/command` or if they type `/help`.
+
+```golang
+func helpMsg() string {
+	return `
+Hello and welcome to the chat server! Please use
+one of the following commands:
+	1. /list: To list available rooms
+	2. /enter <room>: To enter a room
+	3. /exit: To leave the server
+	4. /help: To display this message
+`
+}
+```
+
+When a user enters the `/list` command, we will run the
+`listRooms` function (shown below). It will output each of the 
+room's names, separated by newlines.
+
+```golang
+func listRooms() string {
+	var sb strings.Builder
+	for _, r := range availableRooms {
+		sb.WriteString(r.Name + "\n")
+	}
+	return sb.String()
+}
+```
+
+`chat` is the main entrypoint to our chat server. First, we open a new
+terminal object for a user's session where the prompt is their username
+followed by a >.
+
+We then read a line from the user with the ReadLine() function. If
+the line starts with a "/", we assume its a slash command and will respond
+with one of the functions we discussed above. The exception is the `/enter`
+command. When a user tries to enter a room, we will get the room object
+from our availableRooms and call the Enter function for that room which was
+discussed previously (in `rooms.go`). To recap, that function adds a user to its
+list of registered users and then shows them the entire history of the chatroom.
+If they are already in a room, we first exit the old room before enterring the
+new one.
+
+If the line doesn't start with a "/", we assume that the user is trying to send
+a message. If they are in a room, we simply send a message. If they are not
+in a room, we just show the help command.
+
+```golang
+func chat(s ssh.Session) {
+	term := terminal.NewTerminal(s, fmt.Sprintf("%s > ", s.User()))
+	for {
+		line, err := term.ReadLine()
+		if err != nil {
+			break
+		}
+
+		if len(line) > 0 {
+			if string(line[0]) == "/" {
+				switch {
+				case exitCmd.MatchString(string(line)):
+					return
+				case listCmd.MatchString(string(line)):
+					term.Write([]byte(listRooms()))
+				case enterCmd.MatchString(string(line)):
+					toEnter := strings.Split(line, " ")[1]
+					matching := filter(availableRooms, func(r *rooms.Room) bool {
+						return toEnter == r.Name
+					})
+					if len(matching) == 0 {
+						term.Write([]byte("Invalid Room!\n"))
+					} else {
+						if sessions[s] != nil {
+							sessions[s].Leave(s)
+						}
+						r := matching[0]
+						r.Enter(s, term)
+						sessions[s] = r
+					}
+				case helpCmd.MatchString(string(line)):
+					term.Write([]byte(helpMsg()))
+				default:
+					term.Write([]byte((helpMsg())))
+				}
+			} else {
+				if sessions[s] != nil {
+					sessions[s].SendMessage(s.User(), line)
+				} else {
+					term.Write([]byte((helpMsg())))
+				}
+
+			}
+		}
+	}
+}
+```
+
+Finally, we just wrap it all together by in our main().
+First, we create three rooms. Next, we tell the ssh library
+to handle new connections with the chat() function. Finally,
+we use ListenAndServe to start the ssh server on port 2222.
+
+```golang
+func main() {
+	availableRooms = []*rooms.Room{
+		&rooms.Room{Name: "a"},
+		&rooms.Room{Name: "b"},
+		&rooms.Room{Name: "c"},
+	}
+	sessions = make(map[ssh.Session]*rooms.Room)
+	ssh.Handle(func(s ssh.Session) {
+		chat(s)
+	})
+
+	log.Println("starting ssh server on port 2222...")
+	log.Fatal(ssh.ListenAndServe(":2222", nil))
+}
+```
