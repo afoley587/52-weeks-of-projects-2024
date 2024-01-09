@@ -341,3 +341,5 @@ And you have officially built an SSH server. Let's play around and send
 some commands/chats (see video below).
 
 ![Demo](./images/demo.gif)
+
+I hope you liked following along! All code can be found [here](https://github.com/afoley587/52-weeks-of-projects-2024/tree/main/03-chat-ssh-server-golang)!
