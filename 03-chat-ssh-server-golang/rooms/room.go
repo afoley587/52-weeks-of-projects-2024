@@ -7,7 +7,10 @@ import (
 
 /*
 First, let us look at the structs that our rooms package will use
-to keep track of data.
+to keep track of data. In our system, a chatroom will be an object
+which keeps track of users in the chatroom, the messages that have
+been sent, and will help facilitate the delivery of messages to all
+of the users in the room.
 
 The Room struct will have a few pieces of data associated with it.
  1. The name of the room: This will be a string identifier to show

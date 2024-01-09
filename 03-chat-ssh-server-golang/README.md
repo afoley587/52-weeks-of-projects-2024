@@ -1,12 +1,44 @@
 # Building An SSH Chatroom With Go
 
 ## Background
+2024 is my year of growth and knowledge. I am dedicated to doing
+one technical project a week. A prime focus of my learning will 
+be dedicated to a language that I am really falling in love with:
+[golang](https://go.dev/).
+
+To help facilitate my learning, I am building an SSH chat server
+with go. Our server will be able to do a few things:
+
+1. A user will be able to SSH into our server
+2. A user will be able to list the available rooms
+3. A user will be able to enter a chatroom and then send/receive messages
+    to/from the chatroom
+
 
 ## Supporting Libraries
 
+We will be utilizing the following two libraries in building our chat
+server:
+
+1. [`github.com/gliderlabs/ssh`](github.com/gliderlabs/ssh): This library will
+    help us serve the server as well as handle incoming connections.
+2. [`golang.org/x/crypto/ssh/terminal`](golang.org/x/crypto/ssh/terminal): This
+    library will help us create/read/write to PTY terminals for the users 
+    that SSH in to the server.
+
+We can install them with `go get`:
+
+```shell
+go get github.com/gliderlabs/ssh
+go get golang.org/x/crypto/ssh/terminal
+```
+
 ## rooms.go
 First, let us look at the structs that our rooms package will use
-to keep track of data.
+to keep track of data. In our system, a chatroom will be an object 
+which keeps track of users in the chatroom, the messages that have
+been sent, and will help facilitate the delivery of messages to all
+of the users in the room.
 
 The Room struct will have a few pieces of data associated with it.
  1. The name of the room: This will be a string identifier to show
