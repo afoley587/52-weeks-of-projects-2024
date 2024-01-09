@@ -306,3 +306,38 @@ func main() {
 	log.Fatal(ssh.ListenAndServe(":2222", nil))
 }
 ```
+
+## Running
+Well, the code is ready to go! Let's open up one terminal for our server,
+another server for one client, and a third terminal for another client.
+In our server terminal, let's start the server with
+
+```shell
+server> go run main.go 
+2024/01/09 15:51:36 starting ssh server on port 2222...
+```
+![Server Startup](./images/01-server-setup.png)
+
+In our first client terminal, let's connect to the SSH
+server:
+
+```shell
+client1> ssh -o "StrictHostKeyChecking=no" -p 2222 alex@127.0.0.1
+Warning: Permanently added '[127.0.0.1]:2222' (RSA) to the list of known hosts.
+alex > 
+```
+![Client 1 Connection](./images/02-client1-connection.png)
+
+In our second client terminal, let's connect to the SSH
+server as another user:
+
+```shell
+client2> ssh -o "StrictHostKeyChecking=no" -p 2222 bob@127.0.0.1
+bob > 
+```
+![Client 2 Connection](./images/03-client1-connection.png)
+
+And you have officially built an SSH server. Let's play around and send
+some commands/chats (see video below).
+
+![Demo](./images/demo.gif)
