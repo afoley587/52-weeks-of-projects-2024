@@ -14,6 +14,8 @@ import (
 )
 
 /*
+Now that our rooms package has been established, we need to use it!
+
 First, we will want to keep track of a few things:
 1. The sessions we have and which rooms they are in. This will help us make sure
 that the user is sending messages to the right room and will also make sure that

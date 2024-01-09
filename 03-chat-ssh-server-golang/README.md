@@ -1,11 +1,10 @@
-package rooms
+# Building An SSH Chatroom With Go
 
-import (
-	"github.com/gliderlabs/ssh"
-	"golang.org/x/crypto/ssh/terminal"
-)
+## Background
 
-/*
+## Supporting Libraries
+
+## rooms.go
 First, let us look at the structs that our rooms package will use
 to keep track of data.
 
@@ -26,7 +25,8 @@ The SSH Session gives us underlying session information like the
 username while the terminal gives us a nice way to send and
 receive messages from the user. The message struct, on the other hand,
 just needs to keep track of the sending user and the actual message.
-*/
+
+```golang
 type Room struct {
 	Name    string
 	History []Message
@@ -42,8 +42,8 @@ type Message struct {
 	From    string
 	Message string
 }
+```
 
-/*
 So, now that our room is established, what kind of things should the room
 be able to do? Well, I think our room should allow users to do three things:
 1. Enter the room
@@ -75,8 +75,8 @@ do that by typing in their terminal. First, we create a message
 object with their username as the From attribute and the string
 they typed as the Message attribute. The message then get's appended
 to the rooms history and sent out to all of the other users.
-*/
 
+```golang
 func (r *Room) Enter(sess ssh.Session, term *terminal.Terminal) {
 	u := User{Session: sess, Terminal: term}
 	r.Users = append(r.Users, u)
@@ -117,3 +117,42 @@ func send(u User, m Message) {
 	raw := m.From + "> " + m.Message + "\n"
 	u.Terminal.Write([]byte(raw))
 }
+```
+
+## main.go
+
+Now that our rooms package has been established, we need to use it!
+
+First, we will want to keep track of a few things:
+
+1. The sessions we have and which rooms they are in. This will help us make sure
+    that the user is sending messages to the right room and will also make sure that
+    a user leaves their current room before hopping to another room.
+2. The available rooms that we can offer to users. We will be able to show users
+    which rooms are available, but also helps us keep track of who is where.
+
+We also define a few supported commands:
+
+* `/enter <room>` will allow a user to enter a room
+* `/help` will show users a help screen
+* `/exit` will exit the current session
+* `/list` will show the chat rooms to the user
+
+```golang
+var (
+	sessions       map[ssh.Session]*rooms.Room
+	availableRooms []*rooms.Room
+	enterCmd       = regexp.MustCompile(`^/enter.*`)
+	helpCmd        = regexp.MustCompile(`^/help.*`)
+	exitCmd        = regexp.MustCompile(`^/exit.*`)
+	listCmd        = regexp.MustCompile(`^/list.*`)
+)
+```
+
+So, what happens when we enter these commands? Well,
+let's take a look at their corresponding functions. We will
+skip `/enter <room>` and `/exit` for now and go through 
+`/help` and `/list`
+
+We will use this help message when a user inputs an
+unknown /command or if they type /help.
