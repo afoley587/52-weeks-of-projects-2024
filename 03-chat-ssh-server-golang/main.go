@@ -39,6 +39,11 @@ var (
 )
 
 /*
+So, what happens when we enter these commands? Well,
+let's take a look at their corresponding functions. We will
+skip `/enter <room>` and `/exit` for now and go through
+`/help` and `/list`
+
 We will use this help message when a user inputs an
 unknown /command or if they type /help.
 */
@@ -70,9 +75,9 @@ func filter[T any](s []T, cond func(t T) bool) []T {
 }
 
 /*
-We will call listRooms when a user runs the /list
-command. It will output each of the room's names, separated
-by newlines.
+When a user enters the `/list` command, we will run the
+`listRooms` function (shown below). It will output each of the
+room's names, separated by newlines.
 */
 func listRooms() string {
 	var sb strings.Builder
@@ -83,16 +88,16 @@ func listRooms() string {
 }
 
 /*
-chat is the main entrypoint to our chat server. First, we open a new
+`chat` is the main entrypoint to our chat server. First, we open a new
 terminal object for a user's session where the prompt is their username
 followed by a >.
 
 We then read a line from the user with the ReadLine() function. If
 the line starts with a "/", we assume its a slash command and will respond
-with one of the functions we discussed above. The exception is the /enter
+with one of the functions we discussed above. The exception is the `/enter`
 command. When a user tries to enter a room, we will get the room object
 from our availableRooms and call the Enter function for that room which was
-discussed previously (in rooms.go). To recap, that function adds a user to its
+discussed previously (in `rooms.go`). To recap, that function adds a user to its
 list of registered users and then shows them the entire history of the chatroom.
 If they are already in a room, we first exit the old room before enterring the
 new one.
