@@ -335,7 +335,7 @@ server as another user:
 client2> ssh -o "StrictHostKeyChecking=no" -p 2222 bob@127.0.0.1
 bob > 
 ```
-![Client 2 Connection](./images/03-client1-connection.png)
+![Client 2 Connection](./images/03-client2-connection.png)
 
 And you have officially built an SSH server. Let's play around and send
 some commands/chats (see video below).
