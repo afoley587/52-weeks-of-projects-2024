@@ -1,5 +1,7 @@
 # Building An SSH Chatroom With Go
 
+![Thumbnail](./images/thumbnail.png)
+
 ## Background
 2024 is my year of growth and knowledge. I am dedicated to doing
 one technical project a week. A prime focus of my learning will 
