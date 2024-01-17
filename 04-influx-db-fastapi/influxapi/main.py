@@ -23,4 +23,3 @@ app = FastAPI()
 app.include_router(read_router)
 app.include_router(write_router)
 app.include_router(chart_router)
-

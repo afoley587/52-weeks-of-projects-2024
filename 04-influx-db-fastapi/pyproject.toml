@@ -12,6 +12,8 @@ uvicorn = "^0.25.0"
 python-multipart = "^0.0.6"
 black = "^23.12.1"
 loguru = "^0.7.2"
+influxdb = "^5.3.1"
+influxdb-client = "^1.39.0"
 
 
 [build-system]
