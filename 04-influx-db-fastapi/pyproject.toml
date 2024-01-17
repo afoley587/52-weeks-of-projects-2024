@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "influxapi"
+version = "0.1.0"
+description = ""
+authors = ["Alexander Foley <alexandergfoley@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+fastapi = "^0.108.0"
+uvicorn = "^0.25.0"
+python-multipart = "^0.0.6"
+black = "^23.12.1"
+loguru = "^0.7.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
