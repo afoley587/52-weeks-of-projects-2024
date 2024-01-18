@@ -2,6 +2,7 @@ from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
 from pydantic import SecretStr
 from typing import Union, List
+from influxapi.schemas import InfluxWaveRecord
 
 
 class InfluxClient:
@@ -22,7 +23,6 @@ class InfluxClient:
             query += f'|> filter(fn:(r) => r.location == "{location}")'
         if min_height > 0:
             query += f'|> filter(fn:(r) => r._field >= "{min_height}")'
-        print(query)
         return await self._query(query)
 
     async def list_wave_heights(self):
@@ -41,5 +41,8 @@ class InfluxClient:
         results = []
         for table in result:
             for record in table.records:
-                results.append((record.get_field(), record.get_value()))
+                r = InfluxWaveRecord(
+                    location=record.values.get("location"), height=record.get_value()
+                )
+                results.append(r)
         return results

@@ -55,4 +55,5 @@ async def query_bucket(
         bucket, settings.influx_token, settings.influx_org, settings.influx_url
     )
     records = await ic.read_wave_height(location=location, min_height=min_height)
+    print(records)
     return ListBucketResponse(bucket=bucket, records=records)
