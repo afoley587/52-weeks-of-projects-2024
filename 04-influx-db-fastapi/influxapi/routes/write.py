@@ -5,6 +5,7 @@ from influxapi.client.influx import (
     InfluxWaveClient,
     InfluxNotAvailableException,
     BucketNotFoundException,
+    BadQueryException,
 )
 from influxapi.config import settings
 
@@ -40,7 +41,11 @@ async def insert_bucket(
     )
     try:
         await ic.record_wave_height(r.location, r.height)
-    except (InfluxNotAvailableException, BucketNotFoundException) as e:
+    except (
+        InfluxNotAvailableException,
+        BucketNotFoundException,
+        BadQueryException,
+    ) as e:
         raise HTTPException(
             status_code=e.STATUS_CODE,
             detail=e.DESCRIPTION,

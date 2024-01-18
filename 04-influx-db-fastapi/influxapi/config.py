@@ -12,7 +12,6 @@ use pydantic's `BaseSettings` class. We will have three settings:
 3. influx_org - The InfluxDB organization
 
 These should look familiar from our routers!
-
 """
 
 

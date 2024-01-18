@@ -1,7 +1,7 @@
 version: '3'
 services:
   influxdb:
-    image: influxdb:latest
+    image: influxdb:2.7.5
     volumes:
       # Mount for influxdb data directory and configuration
       - influxdb2:/var/lib/influxdb2:rw

@@ -124,6 +124,30 @@ that was queried and a list of all of the `InfluxWaveRecord`
 that were returned (either a listing of the entire bucket
 or a filtered/queried subset).
 
+```python
+class InfluxWaveRecord(BaseModel):
+    location: str = Field(description="Location of the recorded wave")
+    height: float = Field(description="Height of the recorded wave")
+
+
+class InsertWaveHeightRequest(BaseModel):
+    location: str = Field(description="Location of the recorded wave")
+    height: float = Field(description="Height of the recorded wave")
+
+
+class InsertWaveHeightResponse(BaseModel):
+    bucket: str = Field(description="Name of the requested bucket")
+    location: str = Field(description="Location of the recorded wave")
+    height: float = Field(description="Height of the recorded wave")
+
+
+class ListBucketResponse(BaseModel):
+    bucket: str = Field(description="Name of the requested bucket")
+    records: List[InfluxWaveRecord] = Field(
+        description="Contents of the requested bucket"
+    )
+```
+
 ### Step 2: Writing Our Client
 Now, we need to implement a way to interact with our Influx database.
 We also want to handle some exceptions so that our API doesn't return
@@ -132,6 +156,22 @@ expect to handle. The first being the `InfluxNotAvailableException` which
 is what will be raised when InfluxDB can't be reached. Next, we have the
 `BucketNotFoundException` which is what will be raised if a user requests
 a bucket doesn't exist.
+
+```python
+class InfluxNotAvailableException(Exception):
+    STATUS_CODE = 503
+    DESCRIPTION = "Unable to connect to influx."
+
+
+class BucketNotFoundException(Exception):
+    STATUS_CODE = 404
+    DESCRIPTION = "Bucket Not Found."
+
+
+class BadQueryException(Exception):
+    STATUS_CODE = 400
+    DESCRIPTION = "Bad Query."
+```
 
 With our exceptions out of the way, we can build our InfluxDB interface.
 The `InfluxWaveClient` will be initialized with a bucket, a token, an
@@ -154,12 +194,131 @@ method does almost the same thing. It just calls the `read_wave_height`
 method with the default/empty parameters which would match all data points
 in the database.
 
+
+```python
+class InfluxWaveClient:
+    """A restricted client which implements an interface
+    to query the wave-related data from the Influx database
+    """
+
+    MEASUREMENT_NAME: str = "surf_heights"
+
+    def __init__(self, bucket: str, token: SecretStr, org: str, url: str) -> None:
+        self.bucket = bucket
+        self._client = InfluxDBClient(url=url, token=token.get_secret_value(), org=org)
+
+    async def record_wave_height(self, location: str, height: float) -> None:
+        """Records a new wave height for a given location
+
+        Arguments:
+            location (str): The location to tag the data point as
+            height (float): The height of the measured wave
+
+        Returns:
+            None
+        """
+        location = location.lower()
+        p = (
+            Point(InfluxWaveClient.MEASUREMENT_NAME)
+            .tag("location", location)
+            .field("height", height)
+        )
+        await self._insert(p)
+
+    async def read_wave_height(
+        self, location: str = "", min_height: float = -1.0
+    ) -> List[InfluxWaveRecord]:
+        """Reads a wave height given a specific
+
+        Arguments:
+            location (str): The location to filter on
+            min_height (float): The minimum wave height to filter on
+
+        Returns:
+            res (List[InfluxWaveRecord]): The datapoints that match this filter
+        """
+        query = f'from(bucket:"{self.bucket}")\
+            |> range(start: -10m) \
+            |> filter(fn:(r) => r._measurement == "{InfluxWaveClient.MEASUREMENT_NAME}")'
+        if location:
+            location = location.lower()
+            query += f'|> filter(fn:(r) => r.location == "{location}")'
+        if min_height > 0:
+            query += f'|> filter(fn:(r) => r._field >= "{min_height}")'
+        return await self._query(query)
+
+    async def list_wave_heights(self) -> List[InfluxWaveRecord]:
+        """Lists the bucket in question
+
+        Arguments:
+            None
+
+        Returns:
+            res (List[InfluxWaveRecord]): All waves in the buckets
+        """
+        return await self.read_wave_height(location="", min_height=-1.0)
+```
+
 The "private" methods are `_insert` and `_query`. `_insert` will take a 
 data point from the caller. It will use InfluxDB's `write_api` to store
 the data point in the database. The `_query` method uses InfluxDB's
 `query_api` to send the given query to the database. It then puts all
 of the records returned from the `query_api` into the pydantic model 
 we discussed above in step 1.
+
+```python
+    async def _insert(self, p: Point) -> Any:
+        """Inserts a point into the database via InfluxDB write_api
+
+        Arguments:
+            p (Point): The data point to insert into the database
+
+        Returns:
+            res (Any): Results from the write_api
+        """
+        write_api = self._client.write_api(write_options=SYNCHRONOUS)
+        try:
+            res = write_api.write(bucket=self.bucket, record=p)
+        except NewConnectionError:
+            raise InfluxNotAvailableException()
+        except ApiException as e:
+            if e.status and e.status == 404:
+                raise BucketNotFoundException()
+            raise InfluxNotAvailableException()
+        logger.info(f"{res=}")
+        return res
+
+    async def _query(self, query: str = "") -> List[InfluxWaveRecord]:
+        """Queries the InfluxDB with the provided query string
+
+        Arguments:
+            query (str): The raw query string to pass to InfluxSB
+
+        Returns:
+            res (List[InfluxWaveRecord]): A list of waves that match the query
+        """
+        logger.debug(f"Running {query=}")
+        query_api = self._client.query_api()
+        try:
+            result = query_api.query(query=query)
+        except NewConnectionError:
+            raise InfluxNotAvailableException()
+        except ApiException as e:
+            if e.status and e.status == 404:
+                raise BadQueryException()
+            if e.status and e.status == 404:
+                raise BucketNotFoundException()
+            raise InfluxNotAvailableException()
+        res = []
+        for table in result:
+            for record in table.records:
+                r = InfluxWaveRecord(
+                    location=record.values.get("location"), height=record.get_value()
+                )
+                res.append(r)
+        logger.debug(f"Query returned {len(res)} records")
+        return res
+```
 
 ### Step 3: Writing Our Write Router
 With the schemas and client out of the way, we can begin to use them
@@ -170,6 +329,42 @@ The insert endpoint will take a `InsertWaveHeightRequest` request
 from the caller. It will instantiate the client and pass the
 location and height from the client request to the `record_wave_height`
 method. Then, it will just return the stored data to the user.
+
+```python
+write_router = APIRouter(prefix="/write")
+
+
+@write_router.post(
+    "/{bucket}/insert",
+    summary="Insert data into a bucket.",
+    responses={
+        201: {"description": "Successfully Inserted Into Bucket."},
+        400: {"description": "Bad data requested."},
+        404: {"description": "Bucket not found."},
+        503: {"description": "InfluxDB Not Available"},
+    },
+)
+async def insert_bucket(
+    r: InsertWaveHeightRequest, bucket: str
+) -> InsertWaveHeightResponse:
+    logger.debug(f"Insert data into {bucket=}")
+    ic = InfluxWaveClient(
+        bucket, settings.influx_token, settings.influx_org, settings.influx_url
+    )
+    try:
+        await ic.record_wave_height(r.location, r.height)
+    except (
+        InfluxNotAvailableException,
+        BucketNotFoundException,
+        BadQueryException,
+    ) as e:
+        raise HTTPException(
+            status_code=e.STATUS_CODE,
+            detail=e.DESCRIPTION,
+        )
+    logger.debug(f"Inserted data into {bucket=} with {r.location=} and {r.height=}")
+    return InsertWaveHeightResponse(bucket=bucket, location=r.location, height=r.height)
+```
 
 ### Step 4: Writing Our Read Router
 Let's move on to the read router. This router
@@ -182,10 +377,75 @@ using the server's settings (discussed later). It then calls the
 `read_wave_height` client method and then return all of the matching
 data points to the caller.
 
+```python
+read_router = APIRouter(prefix="/read")
+
+
+@read_router.get(
+    "/{bucket}/query",
+    summary="Queries a bucket's contents.",
+    responses={
+        200: {"description": "Successfully Queried Bucket."},
+        400: {"description": "Bad Filter Requested."},
+        404: {"description": "Bucket not found."},
+        503: {"description": "InfluxDB Not Available"},
+    },
+)
+async def query_bucket(
+    r: Request, bucket: str, location: str = "", min_height: float = -1.0
+) -> ListBucketResponse:
+    logger.debug(f"Querying {bucket=} with {location=} and {min_height}")
+    ic = InfluxWaveClient(
+        bucket, settings.influx_token, settings.influx_org, settings.influx_url
+    )
+    try:
+        records = await ic.read_wave_height(location=location, min_height=min_height)
+    except (
+        InfluxNotAvailableException,
+        BucketNotFoundException,
+        BadQueryException,
+    ) as e:
+        raise HTTPException(
+            status_code=e.STATUS_CODE,
+            detail=e.DESCRIPTION,
+        )
+    logger.debug(f"Records fetched {records=}")
+    return ListBucketResponse(bucket=bucket, records=records)
+```
+
 The list endpoint does almost the same thing except, it doesn't have
 any query parameters because we really just want all of the data points
 from the bucket. So, this method instantiates the client and then calls
 the `list_wave_heights` method and returns the data points to the caller.
+
+```python
+@read_router.get(
+    "/{bucket}/list",
+    summary="List's a bucket's contents.",
+    responses={
+        200: {"description": "Successfully Listed Bucket."},
+        404: {"description": "Bucket not found."},
+        503: {"description": "InfluxDB Not Available"},
+    },
+)
+async def list_bucket(r: Request, bucket: str) -> ListBucketResponse:
+    logger.debug(f"Listing {bucket=}")
+    ic = InfluxWaveClient(
+        bucket, settings.influx_token, settings.influx_org, settings.influx_url
+    )
+    try:
+        records = await ic.list_wave_heights()
+    except (
+        InfluxNotAvailableException,
+        BucketNotFoundException,
+        BadQueryException,
+    ) as e:
+        raise HTTPException(
+            status_code=e.STATUS_CODE,
+            detail=e.DESCRIPTION,
+        )
+    return ListBucketResponse(bucket=bucket, records=records)
+```
 
 ### Step 5: Configuration And Tying It Together
 All of the pieces of the puzzle are now built! We can then create a 
@@ -196,10 +456,26 @@ use pydantic's `BaseSettings` class. We will have three settings:
 2. influx_token - The InfluxDB authentication token
 3. influx_org - The InfluxDB organization
 
+```python
+class Settings(BaseSettings):
+    influx_url: str = os.environ.get("INFLUX_URL")
+    influx_token: SecretStr = os.environ.get("INFLUX_TOKEN")
+    influx_org: str = os.environ.get("INFLUX_ORG")
+
+
+settings = Settings()
+```
+
 These should look familiar from our routers!
 
 Finally, we can attach our routers to our FastAPI App and use uvicorn to kick 
 it off.
+
+```python
+app = FastAPI()
+app.include_router(read_router)
+app.include_router(write_router)
+```
 
 ## Running The Stack
 Let's start running everything. We won't go into too much depth on

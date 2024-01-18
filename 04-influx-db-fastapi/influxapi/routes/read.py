@@ -6,6 +6,7 @@ from influxapi.client.influx import (
     InfluxWaveClient,
     InfluxNotAvailableException,
     BucketNotFoundException,
+    BadQueryException,
 )
 from influxapi.config import settings
 
@@ -47,7 +48,11 @@ async def query_bucket(
     )
     try:
         records = await ic.read_wave_height(location=location, min_height=min_height)
-    except (InfluxNotAvailableException, BucketNotFoundException) as e:
+    except (
+        InfluxNotAvailableException,
+        BucketNotFoundException,
+        BadQueryException,
+    ) as e:
         raise HTTPException(
             status_code=e.STATUS_CODE,
             detail=e.DESCRIPTION,
@@ -72,7 +77,11 @@ async def list_bucket(r: Request, bucket: str) -> ListBucketResponse:
     )
     try:
         records = await ic.list_wave_heights()
-    except (InfluxNotAvailableException, BucketNotFoundException) as e:
+    except (
+        InfluxNotAvailableException,
+        BucketNotFoundException,
+        BadQueryException,
+    ) as e:
         raise HTTPException(
             status_code=e.STATUS_CODE,
             detail=e.DESCRIPTION,

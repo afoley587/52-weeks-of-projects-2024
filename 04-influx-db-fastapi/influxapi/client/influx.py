@@ -10,11 +10,12 @@ from influxapi.schemas import InfluxWaveRecord
 """
 Now, we need to implement a way to interact with our Influx database.
 We also want to handle some exceptions so that our API doesn't return
-error 500 codes on unhandled exceptions. We have two expections that we
+error 500 codes on unhandled exceptions. We have three expections that we
 expect to handle. The first being the `InfluxNotAvailableException` which
 is what will be raised when InfluxDB can't be reached. Next, we have the
 `BucketNotFoundException` which is what will be raised if a user requests
-a bucket doesn't exist.
+a bucket doesn't exist. The last being the `BadQueryException` which
+will get raised if there's an error in our queries.
 
 With our exceptions out of the way, we can build our InfluxDB interface.
 The `InfluxWaveClient` will be initialized with a bucket, a token, an
@@ -54,6 +55,11 @@ class InfluxNotAvailableException(Exception):
 class BucketNotFoundException(Exception):
     STATUS_CODE = 404
     DESCRIPTION = "Bucket Not Found."
+
+
+class BadQueryException(Exception):
+    STATUS_CODE = 400
+    DESCRIPTION = "Bad Query."
 
 
 class InfluxWaveClient:
@@ -98,7 +104,7 @@ class InfluxWaveClient:
             res (List[InfluxWaveRecord]): The datapoints that match this filter
         """
         query = f'from(bucket:"{self.bucket}")\
-            |> range(start: -10m)\
+            |> range(start: -10m) \
             |> filter(fn:(r) => r._measurement == "{InfluxWaveClient.MEASUREMENT_NAME}")'
         if location:
             location = location.lower()
@@ -155,6 +161,8 @@ class InfluxWaveClient:
         except NewConnectionError:
             raise InfluxNotAvailableException()
         except ApiException as e:
+            if e.status and e.status == 404:
+                raise BadQueryException()
             if e.status and e.status == 404:
                 raise BucketNotFoundException()
             raise InfluxNotAvailableException()
