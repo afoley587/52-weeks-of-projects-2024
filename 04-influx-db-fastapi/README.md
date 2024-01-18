@@ -230,7 +230,7 @@ intiial organization, and initial bucket:
 
 ![Information Page](./img/02-basic-information.png)
 
-Let's copy the admin token to our clipboard:
+Let's copy the admin token to our clipboard and then select `CONFIGURE LATER`:
 
 ![Token Page](./img/03-copy-token.png)
 
@@ -240,3 +240,42 @@ And we should now be ready to interact with InfluxDB:
 
 
 ### Step 2: Using Our API
+InfluxDB is now up and running! Let's set our environment variables:
+
+```shell
+#### NOTE: Your token will be different than mine - and this token
+#### is not sensitive to me
+prompt> export INFLUX_URL=http://localhost:8086
+prompt> export INFLUX_TOKEN="owewC-0EpmoqOtL9ObUuNrh0Y0pIP4zGEuSC2LozDFc8ICgeISHtO8IG-8AwafJgO6sdcJI8kO9qTKW7dwhipA=="
+prompt> export INFLUX_ORG=localtest
+```
+
+Now we should be able to spin up our API:
+
+```shell
+prompt> poetry run uvicorn influxapi.main:app --reload                                                                
+INFO:     Will watch for changes in these directories: ['/Users/alexanderfoley/mycode/52-weeks-of-projects/04-influx-db-fastapi']
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [45809] using StatReload
+INFO:     Started server process [46035]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+```
+
+Once our API starts, we can go back to a browser and head to 
+http://localhost:8000/docs which will open up our Swagger docs:
+
+![Swagger Docs](./img/05-swagger-docs.png)
+
+Let's expand the `/write/{bucket}/insert` tab and send a few data points
+to the API (and therefore Influx):
+
+![Insert Data](./img/06-insert-data.png)
+
+And finally, let's list our data from the bucket:
+
+![List Bucket](./img/07-list-bucket.png)
+
+Play around with querying the data too!
+
+Thanks for reading along, please feel free to grab this code from [github]()!
