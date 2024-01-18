@@ -75,6 +75,11 @@ our pydantic models that our API and client will use.
 There are a few external libraries to install, such as `influx-python-client`
 and `fastapi`. I have provided a [requirements.txt]() for ease of use!
 
+With all this being said, I will make two assumptions:
+
+1. You have [python](https://www.python.org/) installed
+2. You have [docker-compose](https://docs.docker.com/compose/) installed
+
 ## Building The API
 Now that we know what we are building, let's begin building it. I have
 broken down the process into 5 steps:
@@ -88,11 +93,150 @@ broken down the process into 5 steps:
 So, let's begin!
 
 ### Step 1: Writing Our Pydantic Models
+Schemas are what our APIs and Client will use to fetch data
+and put them into some normalized, jsonifiable format. Typically, 
+we would have two different sets of files: `schemas.py` and `models.py`.
+Schemas would typically be used for REST API responses/requests while
+models might be used closer to the data layer and deal with the database
+result sets. However, in our case, we will just combine the two for 
+brevity and because the size of our API is so small.
+
+First, we have our `InfluxWaveRecord` model. This model is our only real
+database model. When the client fetches data from InfluxDB, it will put
+each record into a `InfluxWaveRecord` type and then return a list of those
+to the caller. More on that later! The `InfluxWaveRecord` model has two
+attributes: a location of the wave and the height of the wave.
+
+Next, we have a request/response pair for when we want to insert data
+into InfluxDB. These seem like duplicates, but I like to keep request
+and response models separate so that updating one (i.e. providing
+more information in a response) is easy and makes our code more flexible.
+
+The `InsertWaveHeightRequest` will be used when a user sends data to
+our API. It has two attributes: a location of the wave and the height 
+of the wave. The `InsertWaveHeightResponse` is what will be returned
+to the user after they insert data into InfluxDB. It has the same
+two attributes as `InsertWaveHeightRequest`.
+
+Finally, we have a response for when a user tries to read/list/query
+InfluxDB. The `ListBucketResponse` has two attributes: the bucket
+that was queried and a list of all of the `InfluxWaveRecord`
+that were returned (either a listing of the entire bucket
+or a filtered/queried subset).
+
 ### Step 2: Writing Our Client
+Now, we need to implement a way to interact with our Influx database.
+We also want to handle some exceptions so that our API doesn't return
+error 500 codes on unhandled exceptions. We have two expections that we
+expect to handle. The first being the `InfluxNotAvailableException` which
+is what will be raised when InfluxDB can't be reached. Next, we have the
+`BucketNotFoundException` which is what will be raised if a user requests
+a bucket doesn't exist.
+
+With our exceptions out of the way, we can build our InfluxDB interface.
+The `InfluxWaveClient` will be initialized with a bucket, a token, an
+organization, and a url. The bucket will be used when reading/inserting
+data into InfluxDB. The URL, token, and organization will be used to connect
+to the right InfluxDB instance. The client provides a few "public" methods
+to users: `record_wave_height`, `read_wave_height`, and `list_wave_heights`.
+It also has two "private" methods: `_insert` and `_query`.
+
+First, we will discuss our "public" methods. `record_wave_height` takes a
+few parameters from the caller: a location to record and the wave's height
+to record. It create a Point object and then calls the "private" `_insert`
+method with that point. Next, we have the `read_wave_height` method. This
+method also takes two parameters: a location to filter for and a minimmum 
+height to filter on. For example, if we pass "hawaii" and "1.25", we would
+be looking for waves in Hawaii that are at least 1.25 (unit doesn't matter).
+This would call the "private" `_query` method with the relevant filters
+and return the matching data points to the caller. The `list_wave_heights`
+method does almost the same thing. It just calls the `read_wave_height` 
+method with the default/empty parameters which would match all data points
+in the database.
+
+The "private" methods are `_insert` and `_query`. `_insert` will take a 
+data point from the caller. It will use InfluxDB's `write_api` to store
+the data point in the database. The `_query` method uses InfluxDB's
+`query_api` to send the given query to the database. It then puts all
+of the records returned from the `query_api` into the pydantic model 
+we discussed above in step 1.
+
 ### Step 3: Writing Our Write Router
+With the schemas and client out of the way, we can begin to use them
+within our routers. Let's start with the write router. This router
+will include the following endpoint: `/write/<bucket>/insert`.
+
+The insert endpoint will take a `InsertWaveHeightRequest` request
+from the caller. It will instantiate the client and pass the
+location and height from the client request to the `record_wave_height`
+method. Then, it will just return the stored data to the user.
+
 ### Step 4: Writing Our Read Router
+Let's move on to the read router. This router
+will include the following endpoints: `/read/<bucket>/query` and
+`/read/<bucket>/list`. 
+
+The query endpoint will take two optional query parameters from the 
+caller: location and min_height. It will then instantiate our client
+using the server's settings (discussed later). It then calls the 
+`read_wave_height` client method and then return all of the matching
+data points to the caller.
+
+The list endpoint does almost the same thing except, it doesn't have
+any query parameters because we really just want all of the data points
+from the bucket. So, this method instantiates the client and then calls
+the `list_wave_heights` method and returns the data points to the caller.
+
 ### Step 5: Configuration And Tying It Together
+All of the pieces of the puzzle are now built! We can then create a 
+reusable set of settings that our clients can use. For this, we will
+use pydantic's `BaseSettings` class. We will have three settings:
+
+1. influx_url - The InfluxDB connection URL
+2. influx_token - The InfluxDB authentication token
+3. influx_org - The InfluxDB organization
+
+These should look familiar from our routers!
+
+Finally, we can attach our routers to our FastAPI App and use uvicorn to kick 
+it off.
 
 ## Running The Stack
+Let's start running everything. We won't go into too much depth on
+the configuration of InfluxDB. What we will do is run InfluxDB via
+docker-compose, then we will walk through the UI to do a very basic
+bootstrap and root user creation. We will then run our API and interact
+with it via the Swagger docs.
+
 ### Step 1: Bootstrapping InfluxDB
+Let's start by spinning up our InfluxDB instance. I have provided a 
+docker-compose file [here](). Go clone the [git repo]() and run the following:
+
+```
+prompt> docker-compose up -d                           
+[+] Running 3/3
+ ✔ Network 04-influx-db-fastapi_default             Created        0.0s 
+ ✔ Volume "04-influx-db-fastapi_influxdb2"          Created        0.0s 
+ ✔ Container 04-influx-db-fastapi-influxdb-1        Started        0.0s 
+```
+
+Let's now open a browser and navigate to http://localhost:8086. You should
+see the onboarding page (shown below):
+
+![Onboarding Page](./img/01-onboarding-page.png)
+
+We will click the `GET STARTED` button and enter a username, password, 
+intiial organization, and initial bucket:
+
+![Information Page](./img/02-basic-information.png)
+
+Let's copy the admin token to our clipboard:
+
+![Token Page](./img/03-copy-token.png)
+
+And we should now be ready to interact with InfluxDB:
+
+![Dashboard Page](./img/04-final-viewer.png)
+
+
 ### Step 2: Using Our API
