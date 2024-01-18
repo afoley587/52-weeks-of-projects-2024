@@ -1,6 +1,8 @@
 # Recording Time Series Data With APIs: InfluxDB + FastAPI
 ## Building an API that can read, query, and write data into FastAPI
 
+![thumbnail](./img/thumbnail.png)
+
 ## Introduction
 Time series data has seen an explosion over the past few years, and for good
 reason. It can be used everywhere. Look at Datadog, for example. Datadog
