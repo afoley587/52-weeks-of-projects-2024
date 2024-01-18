@@ -1,26 +1,11 @@
 from fastapi import APIRouter, Request, HTTPException
+from loguru import logger
+
 from influxapi.schemas import GetBucketResponse, ListBucketResponse
 from influxapi.client.influx import InfluxClient
 from influxapi.config import settings
 
 read_router = APIRouter(prefix="/read")
-
-
-@read_router.get(
-    "/{bucket}",
-    summary="Gets a bucket's metadata.",
-    responses={
-        200: {"description": "Successfully Found Bucket."},
-        404: {"description": "Bucket not found."},
-    },
-)
-async def get_bucket(r: Request, bucket: str) -> GetBucketResponse:
-    ic = InfluxClient(
-        bucket, settings.influx_token, settings.influx_org, settings.influx_url
-    )
-    data = ic.get_bucket()
-    print(data)
-    return GetBucketResponse(bucket=bucket)
 
 
 @read_router.get(
@@ -32,6 +17,7 @@ async def get_bucket(r: Request, bucket: str) -> GetBucketResponse:
     },
 )
 async def list_bucket(r: Request, bucket: str) -> ListBucketResponse:
+    logger.debug(f"Listing {bucket=}")
     ic = InfluxClient(
         bucket, settings.influx_token, settings.influx_org, settings.influx_url
     )
@@ -51,9 +37,10 @@ async def list_bucket(r: Request, bucket: str) -> ListBucketResponse:
 async def query_bucket(
     r: Request, bucket: str, location: str = "", min_height: float = -1.0
 ) -> ListBucketResponse:
+    logger.debug(f"Querying {bucket=} with {location=} and {min_height}")
     ic = InfluxClient(
         bucket, settings.influx_token, settings.influx_org, settings.influx_url
     )
     records = await ic.read_wave_height(location=location, min_height=min_height)
-    print(records)
+    logger.debug(f"Records fetched {records=}")
     return ListBucketResponse(bucket=bucket, records=records)
