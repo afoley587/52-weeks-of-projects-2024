@@ -74,3 +74,25 @@ our pydantic models that our API and client will use.
 
 There are a few external libraries to install, such as `influx-python-client`
 and `fastapi`. I have provided a [requirements.txt]() for ease of use!
+
+## Building The API
+Now that we know what we are building, let's begin building it. I have
+broken down the process into 5 steps:
+
+1. Writing Our Pydantic Models
+2. Writing Our Client
+3. Writing Our Write Router
+4. Writing Our Read Router
+5. Configuration And Tying It Together
+
+So, let's begin!
+
+### Step 1: Writing Our Pydantic Models
+### Step 2: Writing Our Client
+### Step 3: Writing Our Write Router
+### Step 4: Writing Our Read Router
+### Step 5: Configuration And Tying It Together
+
+## Running The Stack
+### Step 1: Bootstrapping InfluxDB
+### Step 2: Using Our API
