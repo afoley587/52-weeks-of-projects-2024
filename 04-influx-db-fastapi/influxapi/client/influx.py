@@ -139,6 +139,8 @@ class InfluxWaveClient:
         except NewConnectionError:
             raise InfluxNotAvailableException()
         except ApiException as e:
+            if e.status and e.status == 400:
+                raise BadQueryException()
             if e.status and e.status == 404:
                 raise BucketNotFoundException()
             raise InfluxNotAvailableException()
@@ -161,7 +163,7 @@ class InfluxWaveClient:
         except NewConnectionError:
             raise InfluxNotAvailableException()
         except ApiException as e:
-            if e.status and e.status == 404:
+            if e.status and e.status == 400:
                 raise BadQueryException()
             if e.status and e.status == 404:
                 raise BucketNotFoundException()
