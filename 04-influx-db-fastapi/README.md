@@ -73,7 +73,7 @@ everything together. And finally, `schemas.py` is where we will put
 our pydantic models that our API and client will use.
 
 There are a few external libraries to install, such as `influx-python-client`
-and `fastapi`. I have provided a [requirements.txt]() for ease of use!
+and `fastapi`. I have provided a [requirements.txt](https://github.com/afoley587/52-weeks-of-projects-2024/blob/main/04-influx-db-fastapi/requirements.txt) for ease of use!
 
 With all this being said, I will make two assumptions:
 
@@ -486,7 +486,7 @@ with it via the Swagger docs.
 
 ### Step 1: Bootstrapping InfluxDB
 Let's start by spinning up our InfluxDB instance. I have provided a 
-docker-compose file [here](). Go clone the [git repo]() and run the following:
+docker-compose file [here](https://github.com/afoley587/52-weeks-of-projects-2024/blob/main/04-influx-db-fastapi/docker-compose.yml). Go clone the [git repo](https://github.com/afoley587/52-weeks-of-projects-2024/tree/main/04-influx-db-fastapi) and run the following:
 
 ```
 prompt> docker-compose up -d                           
@@ -554,4 +554,4 @@ And finally, let's list our data from the bucket:
 
 Play around with querying the data too!
 
-Thanks for reading along, please feel free to grab this code from [github]()!
+Thanks for reading along, please feel free to grab this code from [github](https://github.com/afoley587/52-weeks-of-projects-2024/tree/main/04-influx-db-fastapi)!
