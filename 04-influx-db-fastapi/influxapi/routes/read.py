@@ -19,6 +19,7 @@ async def get_bucket(r: Request, bucket: str) -> GetBucketResponse:
         bucket, settings.influx_token, settings.influx_org, settings.influx_url
     )
     data = ic.get_bucket()
+    print(data)
     return GetBucketResponse(bucket=bucket)
 
 
@@ -34,7 +35,7 @@ async def list_bucket(r: Request, bucket: str) -> ListBucketResponse:
     ic = InfluxClient(
         bucket, settings.influx_token, settings.influx_org, settings.influx_url
     )
-    records = ic.list_bucket()
+    records = await ic.list_wave_heights()
     return ListBucketResponse(bucket=bucket, records=records)
 
 
@@ -47,9 +48,11 @@ async def list_bucket(r: Request, bucket: str) -> ListBucketResponse:
         404: {"description": "Bucket not found."},
     },
 )
-async def query_bucket(r: Request, bucket: str) -> ListBucketResponse:
+async def query_bucket(
+    r: Request, bucket: str, location: str = "", min_height: float = -1.0
+) -> ListBucketResponse:
     ic = InfluxClient(
         bucket, settings.influx_token, settings.influx_org, settings.influx_url
     )
-    records = ic.query_bucket()
+    records = await ic.read_wave_height(location=location, min_height=min_height)
     return ListBucketResponse(bucket=bucket, records=records)

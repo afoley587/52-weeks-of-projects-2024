@@ -9,31 +9,37 @@ class InfluxClient:
         self.bucket = bucket
         self._client = InfluxDBClient(url=url, token=token.get_secret_value(), org=org)
 
-    def record_get_request(self) -> None:
-        self._insert()
+    async def record_wave_height(self, location, height) -> None:
+        p = Point("surf_heights").tag("location", location).field("height", height)
+        await self._insert(p)
+        return p
 
-    def read_get_request(self) -> List[Point]:
-        self._query()
+    async def read_wave_height(self, location: str = "", min_height: float = -1.0):
+        query = f'from(bucket:"{self.bucket}")\
+            |> range(start: -10m)\
+            |> filter(fn:(r) => r._measurement == "surf_heights")'
+        if location:
+            query += f'|> filter(fn:(r) => r.location == "{location}")'
+        if min_height > 0:
+            query += f'|> filter(fn:(r) => r._field >= "{min_height}")'
+        print(query)
+        return await self._query(query)
 
-    def list_bucket(self):
-        pass
+    async def list_wave_heights(self):
+        query = f'from(bucket:"{self.bucket}")\
+            |> range(start: -10m)\
+            |> filter(fn: (r) => r._measurement == "surf_heights")'
+        return await self._query(query=query)
 
-    def query_bucket(self):
-        pass
-
-    def _insert(self, d: Point) -> None:
+    async def _insert(self, p: Point) -> None:
         write_api = self._client.write_api(write_options=SYNCHRONOUS)
-        write_api.write(bucket=self.bucket, record=d)
+        write_api.write(bucket=self.bucket, record=p)
 
-    def _query(self) -> List[Point]:
+    async def _query(self, query: str = ""):
         query_api = self._client.query_api()
-        query = 'from(bucket:"my-bucket")\
-        |> range(start: -10m)\
-        |> filter(fn:(r) => r._measurement == "my_measurement")\
-        |> filter(fn:(r) => r.location == "Prague")\
-        |> filter(fn:(r) => r._field == "temperature")'
         result = query_api.query(query=query)
         results = []
         for table in result:
             for record in table.records:
                 results.append((record.get_field(), record.get_value()))
+        return results
