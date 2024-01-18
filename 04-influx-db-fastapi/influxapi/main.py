@@ -12,7 +12,6 @@ from fastapi import FastAPI
 
 from influxapi.routes.read import read_router
 from influxapi.routes.write import write_router
-from influxapi.routes.chart import chart_router
 
 """
 First, we instantiate a new application and we just
@@ -22,4 +21,3 @@ will be automatically added to our app.
 app = FastAPI()
 app.include_router(read_router)
 app.include_router(write_router)
-app.include_router(chart_router)
