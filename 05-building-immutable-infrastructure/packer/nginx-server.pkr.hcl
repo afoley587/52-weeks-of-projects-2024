@@ -37,8 +37,7 @@ build {
     ansible_env_vars = [
       "ANSIBLE_DIFF_ALWAYS=1",
       "ANSIBLE_FORCE_COLOR=1",
-      "ANSIBLE_HOST_KEY_CHECKING=False",
-      "ANSIBLE_SSH_ARGS='-o ForwardAgent=yes -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30'"
+      "ANSIBLE_HOST_KEY_CHECKING=False"
     ]
     extra_arguments = [
       "--extra-vars",
