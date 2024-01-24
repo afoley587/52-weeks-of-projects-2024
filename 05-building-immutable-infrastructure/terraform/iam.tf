@@ -1,4 +1,4 @@
-# Vault For EC2
+# Nginx For EC2
 resource "aws_iam_instance_profile" "nginx_iam" {
   name = "nginxIam"
   role = aws_iam_role.nginx_iam.name
