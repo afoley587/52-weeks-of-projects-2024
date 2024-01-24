@@ -1,4 +1,13 @@
 # nginx.yml
-- name: Echo
-  debug:
-    msg: "nginx"
+
+- name: install nginx
+  apt: 
+    name: nginx 
+    state: present
+    install_recommends: false
+
+- name: start nginx
+  service:
+    name: nginx
+    state: started
+    enabled: true

@@ -34,9 +34,19 @@ build {
   sources = ["source.amazon-ebs.debian"]
 
   provisioner "ansible" {
-    ansible_env_vars = ["ANSIBLE_DIFF_ALWAYS=1", "ANSIBLE_FORCE_COLOR=1", "ANSIBLE_HOST_KEY_CHECKING=False", "ANSIBLE_SSH_ARGS='-o ForwardAgent=yes -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30'"]
-    extra_arguments  = ["--extra-vars", "ansible_python_interpreter=/usr/bin/python3"]
-    playbook_file    = "../ansible/main.yml"
-    user             = "${var.ssh_username}"
+    ansible_env_vars = [
+      "ANSIBLE_DIFF_ALWAYS=1",
+      "ANSIBLE_FORCE_COLOR=1",
+      "ANSIBLE_HOST_KEY_CHECKING=False",
+      "ANSIBLE_SSH_ARGS='-o ForwardAgent=yes -o ControlMaster=auto -o ControlPersist=60s -o ServerAliveInterval=30'"
+    ]
+    extra_arguments = [
+      "--extra-vars",
+      "ansible_python_interpreter=/usr/bin/python3",
+      "--scp-extra-args",
+      "'-O'"
+    ]
+    playbook_file = "../ansible/main.yml"
+    user          = "${var.ssh_username}"
   }
 }

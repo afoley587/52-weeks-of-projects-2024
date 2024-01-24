@@ -4,9 +4,21 @@
   become: true
   gather_facts: true
 
+  pre_tasks:
+    - name: upgrade all packages
+      apt:
+        name: "*"
+        state: latest
+
   tasks:
     - name: Setup Appropriate Users
       include_tasks: ./tasks/users.yml
     
     - name: Install and configure nginx
       include_tasks: ./tasks/nginx.yml
+    
+    # As a security man, I do
+    # highly recommended - https://github.com/dev-sec/ansible-collection-hardening
+    - name: Install and configure ufw
+      include_tasks: ./tasks/ufw.yml
+
