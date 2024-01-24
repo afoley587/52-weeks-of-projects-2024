@@ -81,6 +81,7 @@ configure that image. And the `terraform` directory will be used to hold
 our `terraform` HCL to deploy the image.
 
 # Building The Image
+
 ## Packer: Defining The Build
 First, we will be building the base image. As previously noted, we will be 
 using terraform and ansible to accomplish this task. Packer will be used
@@ -168,6 +169,18 @@ data "amazon-ami" "debian" {
 }
 ```
 
+At the top of our file are our `locals` and `data` sources. We can
+think of `locals` as similar to variables, but they are less-easily
+modified. Our `build_date` will be string representation of when the
+build occured in `YYYYMMDDHHmm` format (``, for example). Naturally,
+we don't want some user to define their own timestamp. Next, comes 
+the `data` source. `data` sources are like read-only objects in both
+packer and terraform. We're telling packer to go to aws, look for
+an AMI with the name of `debian-11-amd64*`, device type of `ebs`, and
+virtualization type of `hvm`. There might be multiple, so only return
+to us the most recent one. We can then use this later, knowing the
+exact image we selected.
+
 ```hcl
 source "amazon-ebs" "debian" {
   ami_name              = "${var.ami_name}-${local.build_date}"
@@ -185,6 +198,15 @@ source "amazon-ebs" "debian" {
   }
 }
 ```
+
+Now, we have come to our `source` definition. We're starting
+to actuall define and build our new AMI here. The `amazon-ebs`
+source will go and make an EBS-Backed AMI image. We will be
+giving it the name from our variables file appended with our
+time stamp. We will also be using the `data` source we queried
+for above. Finally, we will be adding a few tags on it. If we 
+stopped here, we would have a copy of the base debian image with
+the only customizations being a new name and extra tags.
 
 ```hcl
 build {
@@ -207,3 +229,243 @@ build {
   }
 }
 ```
+
+Lastly, we have our `build` block. We are saying to packer "Here are 
+the build definitions (`sources`) from above. Please go build them
+for me". We also have a `provisioner` of type `ansible`. This is telling
+packer "Okay, after the original cloning/tagging of the base image is 
+done, run this ansible playbook to do some extra configuration before
+finalizing the AMI".
+
+Now, before going and running our packer build, let's take a peek at 
+the ansible that packer is calling.
+
+## Ansible: Provisioning and Tweaking The Image
+The `main.yml` playbook will be called by packer:
+
+```yaml
+# main.yml
+- name: Nginx AMI Build
+  hosts: all
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+
+    - name: upgrade all packages
+      apt:
+        update_cache: true
+        upgrade: true
+
+    - name: update all packages
+      apt:
+        name: "*"
+        state: latest
+
+  tasks:
+    - name: Install and configure nginx
+      include_tasks: ./tasks/nginx.yml
+    
+    # As a security man, I do
+    # highly recommended - https://github.com/dev-sec/ansible-collection-hardening
+    - name: Install and configure ufw
+      include_tasks: ./tasks/ufw.yml
+```
+
+Now, thankfully this is a pretty simple playbook. We will connect to the 
+provisioned box, denoted by the `hosts: all` (hosts will be passed by packer).
+We will become a privileged user, denoted by `become: true`. We will then
+run an `apt upgrade` and then update all of the currently installed packages
+to their latest version, denoted by the two `apt` modules under `pre_tasks`.
+
+Now we finally get to some more specific tasks. We include the tasks in the 
+`tasks/nginx.yml` file:
+
+```yaml
+# tasks/nginx.yml
+
+- name: install nginx
+  apt: 
+    name: nginx 
+    state: present
+    install_recommends: false
+
+- name: start nginx
+  service:
+    name: nginx
+    state: started
+    enabled: true
+```
+
+All we do with these tasks are:
+
+1. installing the `nginx` binary
+2. starting and enabling the service. Enabling is important because it
+    means that the service will start even if the server is rebooted,
+    which is exactly what we want.
+
+After installing/configuring Nginx, we run another `include_tasks` on the
+`tasks/ufw.yml` file:
+
+```yaml
+# tasks/ufw.yml
+
+- name: Install UFW
+  apt:
+    name: ufw
+    state: present
+    install_recommends: false
+
+- name: allow ports through ufw
+  ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+  loop:
+    - port: "22"
+      proto: "tcp"
+    - port: "80"
+      proto: "tcp"
+    - port: "443"
+      proto: "tcp"
+
+- name: Reload Firewall
+  ufw:
+    state: "reloaded"
+
+- name: enable ufw
+  ufw:
+    state: "enabled"
+```
+
+Personally, I like UFW. It stands for the Uncomplicated FireWall.
+I just find it easier than IPTables. In this task list, we:
+
+1. Make sure UFW is installed
+2. Make firewall rules on the OS to allow traffic to ports 22, 80, and 443
+3. Reload the firewall so the changes take effect
+4. Enable the service so it starts automatically when the server boots up
+
+## Running The Build
+We are done telling packer and ansible how we want our machine to look.
+Now we can go ahead and actually build the AMI. Let's navigate to the
+packer directory and build the image:
+
+```shell
+# Set your AWS Environment variables so packer can authenticate
+# to AWS
+prompt> export AWS_ACCESS_KEY_ID="<AWS_ACCESS_KEY_ID>"
+prompt> export AWS_SECRET_ACCESS_KEY="<AWS_SECRET_ACCESS_KEY>"
+prompt> export AWS_REGION="<AWS_REGION>"
+prompt> export AWS_DEFAULT_REGION="<AWS_REGION>"
+prompt> packer build .
+amazon-ebs.debian: output will be in this color.
+
+==> amazon-ebs.debian: Force Deregister flag found, skipping prevalidating AMI Name
+    amazon-ebs.debian: Found Image ID: ami-0d44e049cfbdfa91f
+==> amazon-ebs.debian: Creating temporary keypair: packer_65b159ea-b868-c6c4-7982-23bdc40184d2
+==> amazon-ebs.debian: Creating temporary security group for this instance: packer_65b159ec-7836-8423-5713-84779f8d8157
+==> amazon-ebs.debian: Authorizing access to port 22 from [0.0.0.0/0] in the temporary security groups...
+==> amazon-ebs.debian: Launching a source AWS instance...
+    amazon-ebs.debian: Instance ID: i-05c09f85be5476653
+==> amazon-ebs.debian: Waiting for instance (i-05c09f85be5476653) to become ready...
+==> amazon-ebs.debian: Using SSH communicator to connect: 54.175.241.32
+==> amazon-ebs.debian: Waiting for SSH to become available...
+==> amazon-ebs.debian: Connected to SSH!
+==> amazon-ebs.debian: Provisioning with Ansible...
+    amazon-ebs.debian: Setting up proxy adapter for Ansible....
+==> amazon-ebs.debian: Executing Ansible: ansible-playbook -e packer_build_name="debian" -e packer_builder_type=amazon-ebs --ssh-extra-args '-o IdentitiesOnly=yes' --extra-vars ansible_python_interpreter=/usr/bin/python3 --scp-extra-args '-O' -e ansible_ssh_private_key_file=/var/folders/v7/xq3n2szs1511qnt_8t2q9qdm0000gp/T/ansible-key2537138684 -i /var/folders/v7/xq3n2szs1511qnt_8t2q9qdm0000gp/T/packer-provisioner-ansible2413123209 /Users/alexanderfoley/mycode/52-weeks-of-projects/05-building-immutable-infrastructure/ansible/main.yml
+    amazon-ebs.debian:
+    amazon-ebs.debian: PLAY [Nginx AMI Build] *********************************************************
+    amazon-ebs.debian:
+    amazon-ebs.debian: TASK [Gathering Facts] *********************************************************
+    amazon-ebs.debian: ok: [default]
+    amazon-ebs.debian:
+    amazon-ebs.debian: TASK [upgrade all packages] ****************************************************
+    amazon-ebs.debian: ok: [default]
+    amazon-ebs.debian:
+    amazon-ebs.debian: TASK [update all packages] *****************************************************
+    amazon-ebs.debian: ok: [default]
+    amazon-ebs.debian:
+    amazon-ebs.debian: TASK [Install and configure nginx] *********************************************
+    amazon-ebs.debian: included: /Users/alexanderfoley/mycode/52-weeks-of-projects/05-building-immutable-infrastructure/ansible/tasks/nginx.yml for default
+    amazon-ebs.debian:
+    amazon-ebs.debian: TASK [install nginx] ***********************************************************
+    amazon-ebs.debian: The following additional packages will be installed:
+    amazon-ebs.debian:   fontconfig-config fonts-dejavu-core libdeflate0 libfontconfig1 libgd3
+    amazon-ebs.debian:   libgeoip1 libjbig0 libjpeg62-turbo libnginx-mod-http-geoip
+    amazon-ebs.debian:   libnginx-mod-http-image-filter libnginx-mod-http-xslt-filter
+    amazon-ebs.debian:   libnginx-mod-mail libnginx-mod-stream libnginx-mod-stream-geoip libtiff5
+    amazon-ebs.debian:   libwebp6 libxslt1.1 nginx-common nginx-core
+    amazon-ebs.debian: Suggested packages:
+    amazon-ebs.debian:   libgd-tools geoip-bin fcgiwrap nginx-doc ssl-cert
+    amazon-ebs.debian: Recommended packages:
+    amazon-ebs.debian:   geoip-database
+    amazon-ebs.debian: The following NEW packages will be installed:
+    amazon-ebs.debian:   fontconfig-config fonts-dejavu-core libdeflate0 libfontconfig1 libgd3
+    amazon-ebs.debian:   libgeoip1 libjbig0 libjpeg62-turbo libnginx-mod-http-geoip
+    amazon-ebs.debian:   libnginx-mod-http-image-filter libnginx-mod-http-xslt-filter
+    amazon-ebs.debian:   libnginx-mod-mail libnginx-mod-stream libnginx-mod-stream-geoip libtiff5
+    amazon-ebs.debian:   libwebp6 libxslt1.1 nginx nginx-common nginx-core
+    amazon-ebs.debian: 0 upgraded, 20 newly installed, 0 to remove and 0 not upgraded.
+    amazon-ebs.debian: changed: [default]
+    amazon-ebs.debian:
+    amazon-ebs.debian: TASK [start nginx] *************************************************************
+    amazon-ebs.debian: ok: [default]
+    amazon-ebs.debian:
+    amazon-ebs.debian: TASK [Install and configure ufw] ***********************************************
+    amazon-ebs.debian: included: /Users/alexanderfoley/mycode/52-weeks-of-projects/05-building-immutable-infrastructure/ansible/tasks/ufw.yml for default
+    amazon-ebs.debian:
+    amazon-ebs.debian: TASK [Install UFW] *************************************************************
+    amazon-ebs.debian: The following NEW packages will be installed:
+    amazon-ebs.debian:   ufw
+    amazon-ebs.debian: 0 upgraded, 1 newly installed, 0 to remove and 0 not upgraded.
+    amazon-ebs.debian: changed: [default]
+    amazon-ebs.debian:
+    amazon-ebs.debian: TASK [allow ports through ufw] *************************************************
+    amazon-ebs.debian: changed: [default] => (item={'port': '22', 'proto': 'tcp'})
+    amazon-ebs.debian: changed: [default] => (item={'port': '80', 'proto': 'tcp'})
+    amazon-ebs.debian: changed: [default] => (item={'port': '443', 'proto': 'tcp'})
+    amazon-ebs.debian:
+    amazon-ebs.debian: TASK [Reload Firewall] *********************************************************
+    amazon-ebs.debian: changed: [default]
+    amazon-ebs.debian:
+    amazon-ebs.debian: TASK [enable ufw] **************************************************************
+    amazon-ebs.debian: changed: [default]
+    amazon-ebs.debian:
+    amazon-ebs.debian: PLAY RECAP *********************************************************************
+    amazon-ebs.debian: default                    : ok=11   changed=5    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0
+    amazon-ebs.debian:
+==> amazon-ebs.debian: Stopping the source instance...
+    amazon-ebs.debian: Stopping instance
+==> amazon-ebs.debian: Waiting for the instance to stop...
+==> amazon-ebs.debian: Creating AMI immutable-infra-202401240641 from instance i-05c09f85be5476653
+    amazon-ebs.debian: AMI: ami-05369b6c10b5fa759
+==> amazon-ebs.debian: Waiting for AMI to become ready...
+==> amazon-ebs.debian: Skipping Enable AMI deprecation...
+==> amazon-ebs.debian: Adding tags to AMI (ami-05369b6c10b5fa759)...
+==> amazon-ebs.debian: Tagging snapshot: snap-0ec88b56a0781e79f
+==> amazon-ebs.debian: Creating AMI tags
+    amazon-ebs.debian: Adding tag: "buildDate": "202401240641"
+    amazon-ebs.debian: Adding tag: "Name": "immutable-infra"
+==> amazon-ebs.debian: Creating snapshot tags
+==> amazon-ebs.debian: Terminating the source AWS instance...
+==> amazon-ebs.debian: Cleaning up any extra volumes...
+==> amazon-ebs.debian: No volumes to clean up, skipping
+==> amazon-ebs.debian: Deleting temporary security group...
+==> amazon-ebs.debian: Deleting temporary keypair...
+Build 'amazon-ebs.debian' finished after 3 minutes 46 seconds.
+
+==> Wait completed after 3 minutes 46 seconds
+
+==> Builds finished. The artifacts of successful builds are:
+--> amazon-ebs.debian: AMIs were created:
+us-east-1: ami-05369b6c10b5fa759
+```
+
+And voila - you have built your AMI. Your output might not be exactly the same
+as mine, but you should be able to see some of the packer outputs and then some 
+of the ansible output as well. This is how we know our ansible is being called
+from packer! Let's go to the AWS console and check it out:
+
+![Finalized AMI Image](./img/01-aws-ami-console.png)
