@@ -1,6 +1,8 @@
 # Building and Deploying Immutable Infrastructure On AWS
 ## A tale of two tools: Terraform and Packer
 
+![Thumbnail](./img/thumbnail.png)
+
 In the world of infrastructure, two main types have reigned king: 
 mutable and immutable. We can think of mutable infrastructure as a piece
 of infrastructure that we apply upgrades to without destroying. For example, 
