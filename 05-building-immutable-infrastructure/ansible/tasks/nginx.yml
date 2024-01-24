@@ -1,1 +1,4 @@
 # nginx.yml
+- name: Echo
+  debug:
+    msg: "nginx"

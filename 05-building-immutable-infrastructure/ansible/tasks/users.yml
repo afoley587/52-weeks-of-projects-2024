@@ -1,1 +1,4 @@
 # users.yml
+- name: Echo
+  debug:
+    msg: "users"

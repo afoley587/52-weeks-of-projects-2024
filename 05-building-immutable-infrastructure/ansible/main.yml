@@ -1,1 +1,12 @@
 # main.yml
+- name: Nginx AMI Build
+  hosts: all
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Setup Appropriate Users
+      include_tasks: ./tasks/users.yml
+    
+    - name: Install and configure nginx
+      include_tasks: ./tasks/nginx.yml
