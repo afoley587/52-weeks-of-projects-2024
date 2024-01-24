@@ -20,6 +20,9 @@
     - name: Install and configure nginx
       include_tasks: ./tasks/nginx.yml
     
+    - name: Install and configure ssm
+      include_tasks: ./tasks/ssm.yml
+    
     # As a security man, I do
     # highly recommended - https://github.com/dev-sec/ansible-collection-hardening
     - name: Install and configure ufw

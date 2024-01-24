@@ -267,6 +267,9 @@ The `main.yml` playbook will be called by packer:
   tasks:
     - name: Install and configure nginx
       include_tasks: ./tasks/nginx.yml
+
+    - name: Install and configure ssm
+      include_tasks: ./tasks/ssm.yml
     
     # As a security man, I do
     # highly recommended - https://github.com/dev-sec/ansible-collection-hardening
@@ -307,6 +310,38 @@ All we do with these tasks are:
     which is exactly what we want.
 
 After installing/configuring Nginx, we run another `include_tasks` on the
+`tasks/ssm.yml` file:
+
+```yaml
+# tasks/nginx.yml
+
+- name: Make temporary directory
+  tempfile:
+    state: directory
+    suffix: ssm
+  register: builddir
+
+- name: Download SSM installer
+  get_url:
+    url: https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_amd64/amazon-ssm-agent.deb
+    dest: "{{ builddir.path }}/amazon-ssm-agent.deb"
+  
+- name: Install SSM
+  apt:
+    deb: "{{ builddir.path }}/amazon-ssm-agent.deb"
+
+- name: Start / enable SSM service
+  service:
+    name: amazon-ssm-agent
+    state: started
+    enabled: true
+```
+
+We are following the SSM install steps outlined [here](https://docs.aws.amazon.com/systems-manager/latest/userguide/agent-install-deb.html)
+by AWS. We just create a temporary directory, download the installer into that
+directory, install it, and start/enable to service.
+
+After installing/configuring SSM, we run another `include_tasks` on the
 `tasks/ufw.yml` file:
 
 ```yaml

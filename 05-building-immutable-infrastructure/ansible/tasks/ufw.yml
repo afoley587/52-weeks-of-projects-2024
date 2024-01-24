@@ -1,4 +1,4 @@
-# ufw.yml
+# tasks/ufw.yml
 
 - name: Install UFW
   apt:

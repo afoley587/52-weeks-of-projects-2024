@@ -1,4 +1,4 @@
-# nginx.yml
+# tasks/nginx.yml
 
 - name: install nginx
   apt: 
