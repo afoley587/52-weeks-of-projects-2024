@@ -1,0 +1,28 @@
+# tasks/ufw.yml
+
+- name: Install UFW
+  apt:
+    name: ufw
+    state: present
+    install_recommends: false
+
+- name: allow ports through ufw
+  ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+  loop:
+    - port: "22"
+      proto: "tcp"
+    - port: "80"
+      proto: "tcp"
+    - port: "443"
+      proto: "tcp"
+
+- name: Reload Firewall
+  ufw:
+    state: "reloaded"
+
+- name: enable ufw
+  ufw:
+    state: "enabled"

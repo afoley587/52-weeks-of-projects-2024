@@ -1,0 +1,22 @@
+# tasks/nginx.yml
+
+- name: Make temporary directory
+  tempfile:
+    state: directory
+    suffix: ssm
+  register: builddir
+
+- name: Download SSM installer
+  get_url:
+    url: https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_amd64/amazon-ssm-agent.deb
+    dest: "{{ builddir.path }}/amazon-ssm-agent.deb"
+  
+- name: Install SSM
+  apt:
+    deb: "{{ builddir.path }}/amazon-ssm-agent.deb"
+
+- name: Start / enable SSM service
+  service:
+    name: amazon-ssm-agent
+    state: started
+    enabled: true
