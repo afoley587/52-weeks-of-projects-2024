@@ -43,10 +43,10 @@ find it useful!
 ## Prerequisites
 We will be using three tools to deploy a piece of immutable infrastructure:
 
-* [packer]()
-* [ansible]()
-* [terraform]()
-* [AWS CLI]()
+* [packer](https://www.packer.io/)
+* [ansible](https://www.ansible.com/)
+* [terraform](https://www.terraform.io/)
+* [AWS CLI](https://aws.amazon.com/cli/)
 
 I will also be deploying an EC2 instance into AWS. If you want to follow along,
 and I hope you do, please make sure you have these four tools installed and an 
@@ -866,4 +866,4 @@ our Nginx webpage!
 ![Nginx Webpage](./img/03-nginx-webpage.png)
 
 Thanks for following along! I hope you enjoyed it! If you want to
-dive deeper into the code, it can all be found [here on github]().
+dive deeper into the code, it can all be found [here on github](https://github.com/afoley587/52-weeks-of-projects-2024/tree/main/05-building-immutable-infrastructure).
