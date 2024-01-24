@@ -1,4 +1,4 @@
-// ec2.tf
+# ec2.tf
 data "aws_ami" "nginx" {
   most_recent = true
 

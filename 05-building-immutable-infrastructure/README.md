@@ -46,9 +46,10 @@ We will be using three tools to deploy a piece of immutable infrastructure:
 * [packer]()
 * [ansible]()
 * [terraform]()
+* [AWS CLI]()
 
 I will also be deploying an EC2 instance into AWS. If you want to follow along,
-and I hope you do, please make sure you have these three tools installed and an 
+and I hope you do, please make sure you have these four tools installed and an 
 AWS account setup.
 
 ## Directory Structure / Project Setup
@@ -70,6 +71,7 @@ to the tools that they pertain to:
 └── terraform
     ├── ec2.tf
     ├── iam.tf
+    ├── outputs.tf
     └── versions.tf
 
 5 directories, 10 files
@@ -469,3 +471,337 @@ of the ansible output as well. This is how we know our ansible is being called
 from packer! Let's go to the AWS console and check it out:
 
 ![Finalized AMI Image](./img/01-aws-ami-console.png)
+
+# Deploying The Image
+Okay, we have the AMI built. Now let's deploy it.
+
+We have four `.tf` files in our terraform directory:
+
+1. `versions.tf` - The same idea as the `plugins.pkr.hcl` file we talked about
+    in the packer section. We can skip discussing this one.
+2. `iam.tf` - The IAM roles to attach to our Nginx EC2 instance. For example,
+    we want to be able to use AWS SSM to connect to the instance. Because of
+    that, we will have to add some permissions to the machine.
+3. `ec2.tf` - The actual deployment of the EC2 instance.
+4. `outputs.tf` - The outputs of the deployment
+
+As noted, we will skip the `versions.tf` file. The idea is exactly the same
+as the `plugins.pkr.hcl` we already discussed. The `iam.tf` file is new though.
+In this file, we want to create an instance profile for the EC2 instance so it
+can interact with AWS services and be granted specific roles. The one service
+we're interested in is the SSM one. SSM let's us create secure sessions with
+our machines without opening any security groups. This is great for private
+demos such as this one because we don't have to worry about opening any 
+`0.0.0.0/0` rules on SSH/HTTP(S) ports.
+
+```hcl
+# iam.tf
+# Nginx For EC2
+resource "aws_iam_instance_profile" "nginx_iam" {
+  name = "nginxIam"
+  role = aws_iam_role.nginx_iam.name
+}
+
+resource "aws_iam_role" "nginx_iam" {
+  name               = "nginxIam"
+  assume_role_policy = data.aws_iam_policy_document.nginx_iam.json
+}
+
+data "aws_iam_policy_document" "nginx_iam" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type = "Service"
+
+      identifiers = [
+        "ec2.amazonaws.com",
+        "ssm.amazonaws.com",
+      ]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "nginx_iam" {
+  role       = aws_iam_role.nginx_iam.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+```
+
+We see that we create an instance profile and assign it our
+creaetd role. That role is allowed to take the `AssumeRole`
+action on the EC2 and SSM services. We also attach the `AmazonSSMManagedInstanceCore`
+policy to our role.
+
+Now that our IAM is out of the way, we can create our EC2 VM:
+
+```hcl
+# ec2.tf
+data "aws_ami" "nginx" {
+  most_recent = true
+
+  filter {
+    name   = "name"
+    values = ["immutable-infra-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  owners = ["self"]
+}
+
+resource "tls_private_key" "nginx_ec2" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "aws_key_pair" "nginx_ec2" {
+  key_name   = "nginx-ssh-key"
+  public_key = tls_private_key.nginx_ec2.public_key_openssh
+}
+
+
+resource "aws_instance" "nginx_ec2" {
+  ami                  = data.aws_ami.nginx.id
+  instance_type        = "t2.nano"
+  iam_instance_profile = aws_iam_instance_profile.nginx_iam.id
+  key_name             = aws_key_pair.nginx_ec2.key_name
+}
+```
+
+We are using a terraform `data` source to find and pull __our__
+most recently built AWS AMI from AWS. This should look similar to
+the packer file's `data` source, but we're using our names in the
+filter instead of the default debian one. We then create an SSH
+key pair for the instance. Finally, we deploy the instance using 
+our AMI and key pair. Note creating the key pair in terraform will
+have some security concerns because your TLS private keys are now 
+stored in your terraform state. It might be more beneficial to pass 
+the public key in as a variable in your production environment.
+
+You also might be wondering:
+
+"Why do I need SSH keys if we are using SSM?"
+
+And that's a good question. We will be using both SSH and SSM technically. 
+We will be using SSM to proxy our SSH traffic - meaning that we will need 
+the SSH keys for linux authentication, but will be using SSM for AWS 
+authentication (instead of relying on IP whitelisting).
+
+Finally, we have an `outputs.tf` file:
+
+```hcl
+# outputs.tf
+output "private_key" {
+  value     = tls_private_key.nginx_ec2.private_key_pem
+  sensitive = true
+}
+
+# terraform output -raw private_key > /tmp/nginx-ssh
+
+```
+
+All we are doing here is giving us a way to get the private SSH
+key from terraform so that we can use it later.
+
+We can now deploy our instance with terraform! Let's navigate to the
+terraform directory and deploy it:
+
+```shell
+prompt> terraform apply  
+data.aws_ami.nginx: Reading...
+data.aws_iam_policy_document.nginx_iam: Reading...
+data.aws_iam_policy_document.nginx_iam: Read complete after 0s [id=557597258]
+data.aws_ami.nginx: Read complete after 0s [id=ami-05369b6c10b5fa759]
+
+Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
+  + create
+
+Terraform will perform the following actions:
+
+  # aws_iam_instance_profile.nginx_iam will be created
+  + resource "aws_iam_instance_profile" "nginx_iam" {
+      + arn         = (known after apply)
+      + create_date = (known after apply)
+      + id          = (known after apply)
+      + name        = "nginxIam"
+      + name_prefix = (known after apply)
+      + path        = "/"
+      + role        = "nginxIam"
+      + tags_all    = (known after apply)
+      + unique_id   = (known after apply)
+    }
+
+  # aws_iam_role.nginx_iam will be created
+  + resource "aws_iam_role" "nginx_iam" {
+      + arn                   = (known after apply)
+      + assume_role_policy    = jsonencode(
+            {
+              + Statement = [
+                  + {
+                      + Action    = "sts:AssumeRole"
+                      + Effect    = "Allow"
+                      + Principal = {
+                          + Service = [
+                              + "ssm.amazonaws.com",
+                              + "ec2.amazonaws.com",
+                            ]
+                        }
+                    },
+                ]
+              + Version   = "2012-10-17"
+            }
+        )
+      + create_date           = (known after apply)
+      + force_detach_policies = false
+      + id                    = (known after apply)
+      + managed_policy_arns   = (known after apply)
+      + max_session_duration  = 3600
+      + name                  = "nginxIam"
+      + name_prefix           = (known after apply)
+      + path                  = "/"
+      + tags_all              = (known after apply)
+      + unique_id             = (known after apply)
+    }
+
+  # aws_iam_role_policy_attachment.nginx_iam will be created
+  + resource "aws_iam_role_policy_attachment" "nginx_iam" {
+      + id         = (known after apply)
+      + policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+      + role       = "nginxIam"
+    }
+
+  # aws_instance.nginx_ec2 will be created
+  + resource "aws_instance" "nginx_ec2" {
+      + ami                                  = "ami-05369b6c10b5fa759"
+      + arn                                  = (known after apply)
+      + associate_public_ip_address          = (known after apply)
+      + availability_zone                    = (known after apply)
+      + cpu_core_count                       = (known after apply)
+      + cpu_threads_per_core                 = (known after apply)
+      + disable_api_stop                     = (known after apply)
+      + disable_api_termination              = (known after apply)
+      + ebs_optimized                        = (known after apply)
+      + get_password_data                    = false
+      + host_id                              = (known after apply)
+      + host_resource_group_arn              = (known after apply)
+      + iam_instance_profile                 = (known after apply)
+      + id                                   = (known after apply)
+      + instance_initiated_shutdown_behavior = (known after apply)
+      + instance_lifecycle                   = (known after apply)
+      + instance_state                       = (known after apply)
+      + instance_type                        = "t2.nano"
+      + ipv6_address_count                   = (known after apply)
+      + ipv6_addresses                       = (known after apply)
+      + key_name                             = "nginx-ssh-key"
+      + monitoring                           = (known after apply)
+      + outpost_arn                          = (known after apply)
+      + password_data                        = (known after apply)
+      + placement_group                      = (known after apply)
+      + placement_partition_number           = (known after apply)
+      + primary_network_interface_id         = (known after apply)
+      + private_dns                          = (known after apply)
+      + private_ip                           = (known after apply)
+      + public_dns                           = (known after apply)
+      + public_ip                            = (known after apply)
+      + secondary_private_ips                = (known after apply)
+      + security_groups                      = (known after apply)
+      + source_dest_check                    = true
+      + spot_instance_request_id             = (known after apply)
+      + subnet_id                            = (known after apply)
+      + tags_all                             = (known after apply)
+      + tenancy                              = (known after apply)
+      + user_data                            = (known after apply)
+      + user_data_base64                     = (known after apply)
+      + user_data_replace_on_change          = false
+      + vpc_security_group_ids               = (known after apply)
+    }
+
+  # aws_key_pair.nginx_ec2 will be created
+  + resource "aws_key_pair" "nginx_ec2" {
+      + arn             = (known after apply)
+      + fingerprint     = (known after apply)
+      + id              = (known after apply)
+      + key_name        = "nginx-ssh-key"
+      + key_name_prefix = (known after apply)
+      + key_pair_id     = (known after apply)
+      + key_type        = (known after apply)
+      + public_key      = (known after apply)
+      + tags_all        = (known after apply)
+    }
+
+  # tls_private_key.nginx_ec2 will be created
+  + resource "tls_private_key" "nginx_ec2" {
+      + algorithm                     = "RSA"
+      + ecdsa_curve                   = "P224"
+      + id                            = (known after apply)
+      + private_key_openssh           = (sensitive value)
+      + private_key_pem               = (sensitive value)
+      + private_key_pem_pkcs8         = (sensitive value)
+      + public_key_fingerprint_md5    = (known after apply)
+      + public_key_fingerprint_sha256 = (known after apply)
+      + public_key_openssh            = (known after apply)
+      + public_key_pem                = (known after apply)
+      + rsa_bits                      = 4096
+    }
+
+Plan: 6 to add, 0 to change, 0 to destroy.
+
+Changes to Outputs:
+  + private_key = (sensitive value)
+
+Do you want to perform these actions?
+  Terraform will perform the actions described above.
+  Only 'yes' will be accepted to approve.
+
+  Enter a value: yes
+
+tls_private_key.nginx_ec2: Creating...
+aws_iam_role.nginx_iam: Creating...
+tls_private_key.nginx_ec2: Creation complete after 1s [id=819024842a6a3bedaef3b393f087c1ddb7ea6cb4]
+aws_key_pair.nginx_ec2: Creating...
+aws_iam_role.nginx_iam: Creation complete after 1s [id=nginxIam]
+aws_iam_role_policy_attachment.nginx_iam: Creating...
+aws_iam_instance_profile.nginx_iam: Creating...
+aws_iam_role_policy_attachment.nginx_iam: Creation complete after 0s [id=nginxIam-20240124190454125800000001]
+aws_key_pair.nginx_ec2: Creation complete after 0s [id=nginx-ssh-key]
+aws_iam_instance_profile.nginx_iam: Creation complete after 1s [id=nginxIam]
+aws_instance.nginx_ec2: Creating...
+aws_instance.nginx_ec2: Still creating... [10s elapsed]
+aws_instance.nginx_ec2: Still creating... [20s elapsed]
+aws_instance.nginx_ec2: Still creating... [30s elapsed]
+aws_instance.nginx_ec2: Creation complete after 38s [id=i-025707ac45698b1a7]
+
+Apply complete! Resources: 6 added, 0 changed, 0 destroyed.
+
+Outputs:
+
+private_key = <sensitive>
+```
+
+We can see the deployed EC2 instance in the EC2 console:
+
+![Deployed Instance](./img/02-ec2-instance-console.png)
+
+# Connecting To Our Instance
+
+Let's now connect to our instance. We will be using AWS SSM to
+start a proxy session with our instance. You can get your AWS 
+instance ID from the console above (or from your terraform output):
+
+```shell
+prompt> aws ssm start-session \
+    --target i-025707ac45698b1a7 \
+    --document-name AWS-StartPortForwardingSession \
+    --parameters '{"portNumber":["80"], "localPortNumber":["8000"]}'
+```
+
+We can navigate to `localhost:8000` in a local browser and view
+our Nginx webpage!
+
+![Nginx Webpage](./img/03-nginx-webpage.png)

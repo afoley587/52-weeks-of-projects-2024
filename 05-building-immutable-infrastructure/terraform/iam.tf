@@ -1,3 +1,4 @@
+# iam.tf
 # Nginx For EC2
 resource "aws_iam_instance_profile" "nginx_iam" {
   name = "nginxIam"
