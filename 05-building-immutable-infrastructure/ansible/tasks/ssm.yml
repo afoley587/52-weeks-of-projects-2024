@@ -1,4 +1,4 @@
-# tasks/nginx.yml
+# tasks/ssm.yml
 
 - name: Make temporary directory
   tempfile:

@@ -176,7 +176,7 @@ data "amazon-ami" "debian" {
 At the top of our file are our `locals` and `data` sources. We can
 think of `locals` as similar to variables, but they are less-easily
 modified. Our `build_date` will be string representation of when the
-build occured in `YYYYMMDDHHmm` format (``, for example). Naturally,
+build occured in `YYYYMMDDHHmm` format (`202401240728`, for example). Naturally,
 we don't want some user to define their own timestamp. Next, comes 
 the `data` source. `data` sources are like read-only objects in both
 packer and terraform. We're telling packer to go to aws, look for
@@ -315,7 +315,7 @@ After installing/configuring Nginx, we run another `include_tasks` on the
 `tasks/ssm.yml` file:
 
 ```yaml
-# tasks/nginx.yml
+# tasks/ssm.yml
 
 - name: Make temporary directory
   tempfile:
@@ -649,10 +649,8 @@ You also might be wondering:
 
 "Why do I need SSH keys if we are using SSM?"
 
-And that's a good question. We will be using both SSH and SSM technically. 
-We will be using SSM to proxy our SSH traffic - meaning that we will need 
-the SSH keys for linux authentication, but will be using SSM for AWS 
-authentication (instead of relying on IP whitelisting).
+And that's a good question. You really don't, 
+it's just difficult to add them later, so I figured I would add them now.
 
 Finally, we have an `outputs.tf` file:
 
