@@ -19,19 +19,133 @@ issues becomes blatanly obvious. So, let's do two things today:
 2. Implementing these in GoLang and then running test cases on them
 
 ## A Naive Approach - Bubble Sort
-Let's first talk about the algorithm that we all learned in the beginning...
-bubble sort! The main idea of bubble sort is to go through the array from 
-left to right and swap the items until they are sorted. If we look at some 
-pseudo-code for bubble sort, it will look something like:
+Let's first talk about the algorithm that we all learned at the
+start of our CompSci journey - Bubble Sort!
+Bubble sort is a simple sorting algorithm that 
+repeatedly steps through the list to be sorted, compares each pair of 
+adjacent items, and swaps them if they are in the wrong order. This process 
+is repeated until no swaps are needed, indicating that the list is sorted. 
+The algorithm gets its name from the way smaller elements 
+"bubble" to the top of the list with each iteration.
 
-```shell
-for i := 0 to length [ARR] do
-    for j := 0 to length [ARR] - i - 1 do
-        if A[j] > A[j+1] then
-            Swap(A[j], A[j+1])
-```
+Here's a basic outline of how the bubble sort algorithm works:
 
+1. Start at the beginning of the list.
+2. Compare the first two elements. If the first is greater than the second, swap them.
+3. Move to the next pair of elements and repeat the comparison and swap if necessary.
+4. Continue this process, moving one element to the right each time, until you reach the end of the list.
+5. Repeat steps 1-4 until no more swaps are needed, indicating that the list is sorted.
+
+Bubble sort is not efficient for large lists because its average and worst-case 
+time complexity is O(n^2), where n is the number of elements in the list. 
+However, it's easy to understand and implement, making it useful for 
+educational purposes or for sorting small lists.
 
 ## An Improved Approach - Insertion Sort
-## A Datastructure Approach - Heap Sort
+Let's moved on to a somewhat improved method - Insertion Sort.
+
+Insertion sort is anoter simple sorting algorithm that 
+builds the final sorted list one item at a time. It 
+works by iteratively taking an unsorted element and inserting 
+it into its correct position within a sorted sublist. Initially, 
+the first element of the list is considered to be a sorted sublist of 
+one element. Then, for each subsequent element, the algorithm 
+compares it with the elements in the sorted sublist, moving larger 
+elements one position to the right to make space for the new element.
+
+Here's a basic description of how the insertion sort algorithm works:
+
+1. Start with the second element of the list (assuming the first element is already sorted).
+2. Compare this element with the elements in the sorted sublist, moving from right to left.
+3. If the current element is smaller than the element being compared, shift the compared element one position to the right.
+4. Repeat step 3 until you find the correct position for the current element in the sorted sublist.
+5. Insert the current element into its correct position in the sorted sublist.
+6. Repeat steps 2-5 for each remaining unsorted element until the entire list is sorted.
+
+Insertion sort is an efficient algorithm for sorting small lists or lists that are 
+almost sorted. Its average and worst-case time complexity is O(n^2), 
+where n is the number of elements in the list. However, its best-case time complexity 
+is O(n) when the list is already sorted. Additionally, insertion sort has a 
+space complexity of O(1), making it suitable for situations with limited memory resources.
+
+## A Data Structure Approach - Heap Sort
+
+Heap sort is a comparison-based sorting algorithm that leverages the properties 
+of a binary heap data structure to efficiently sort elements. It consists of 
+two main phases: heap construction and heapification.
+
+**Heap Construction:**
+
+* The first phase involves constructing a max-heap from the input array. 
+    A max-heap is a binary tree where the value of each parent node is 
+    greater than or equal to the values of its children.
+* Starting from the last non-leaf node (index n/2 - 1, where n is the 
+    number of elements), the algorithm sifts down each node to ensure 
+    that the entire tree satisfies the max-heap property.
+
+**Heapification (Sorting):**
+
+* Once the max-heap is constructed, the largest element (at the root) is 
+    swapped with the last element in the heap.
+* The heap size is reduced by one, and the algorithm restores the max-heap 
+    property by performing a sift-down operation on the root node.
+* This process is repeated iteratively until the heap size reduces to 1. 
+    After each iteration, the largest remaining element is placed at the end of the array.
+* The resulting array is sorted in ascending order.
+
+Heap sort has a time complexity of O(n log n) for all cases, where 
+n is the number of elements in the array. This makes it an efficient 
+sorting algorithm, especially for large datasets. Additionally, heap sort 
+is an in-place algorithm, meaning it does not require additional memory 
+proportional to the size of the input array, except for a constant amount 
+used for temporary storage during the sorting process. However, heap sort is 
+not stable, meaning it may change the relative order of elements with equal keys.
+
 ## A Recursive Approach - Quick Sort
+
+Quick sort is a highly efficient sorting algorithm that follows the 
+divide-and-conquer strategy. It works by selecting a 'pivot' element 
+from the array and partitioning the other elements into two sub-arrays 
+according to whether they are less than or greater than the pivot. 
+The sub-arrays are then recursively sorted independently.
+
+Here's how quick sort typically works:
+
+**Partitioning:**
+
+* Choose a pivot element from the array. Commonly, the pivot is selected 
+    as the last element in the array, but other strategies such as selecting
+    the first, middle, or a random element can also be used.
+* Reorder the array so that all elements with values less than the pivot 
+    come before the pivot, and all elements with values greater than 
+    the pivot come after it. After this partitioning, the pivot is 
+    in its final sorted position.
+* This step is often implemented using the partitioning subroutine, 
+    which rearranges the elements such that all elements less than 
+    the pivot are moved to its left, and all elements greater than 
+    the pivot are moved to its right.
+
+**Recursively Sort Sub-arrays:**
+
+* Recursively apply quick sort to the sub-array of elements 
+    with smaller values (i.e., those elements to the left of the pivot) 
+    and the sub-array of elements with greater values 
+    (i.e., those elements to the right of the pivot).
+* The base case for the recursion is when the sub-array has 
+    zero or one element, in which case it is already sorted.
+
+**Combine Results:**
+
+* As the recursive calls return, the sub-arrays are combined 
+    into a single sorted array.
+
+Quick sort is generally faster in practice compared to other 
+sorting algorithms for large datasets, primarily due to its in-place 
+partitioning and relatively simple implementation. It typically has an 
+average-case time complexity of O(n log n), making it very efficient. 
+However, its worst-case time complexity is O(n^2) when the pivot selection 
+consistently results in unbalanced partitions, such as when the input array 
+is already sorted or nearly sorted. To mitigate this, various techniques like 
+randomizing pivot selection or using median-of-three pivot selection can be 
+employed. Overall, quick sort is widely used in practice and serves as a 
+foundational sorting algorithm in many programming languages and libraries.
