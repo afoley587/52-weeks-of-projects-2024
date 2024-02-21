@@ -47,6 +47,20 @@ time complexity is O(n^2), where n is the number of elements in the list.
 However, it's easy to understand and implement, making it useful for 
 educational purposes or for sorting small lists.
 
+### Code
+
+```golang
+func Bubble(arr []int) {
+	for i := 0; i < len(arr)-1; i++ {
+		for j := 0; j < len(arr)-i-1; j++ {
+			if arr[j] > arr[j+1] {
+				arr[j], arr[j+1] = arr[j+1], arr[j]
+			}
+		}
+	}
+}
+```
+
 ## An Improved Approach - Insertion Sort
 ### Overview
 
@@ -75,6 +89,23 @@ almost sorted. Its average and worst-case time complexity is O(n^2),
 where n is the number of elements in the list. However, its best-case time complexity 
 is O(n) when the list is already sorted. Additionally, insertion sort has a 
 space complexity of O(1), making it suitable for situations with limited memory resources.
+
+### Code
+
+```golang
+func Insertion(arr []int) {
+	for i := 1; i < len(arr); i++ {
+		key := arr[i]
+		j := i - 1
+
+		for j >= 0 && key < arr[j] {
+			arr[j+1] = arr[j]
+			j--
+		}
+		arr[j+1] = key
+	}
+}
+```
 
 ## A Data Structure Approach - Heap Sort
 ### Overview
@@ -113,6 +144,44 @@ is an in-place algorithm, meaning it does not require additional memory
 proportional to the size of the input array, except for a constant amount 
 used for temporary storage during the sorting process. However, heap sort is 
 not stable, meaning it may change the relative order of elements with equal keys.
+
+### Code
+
+```golang
+func Heapit(arr []int, n, i int) {
+	largest := i
+	left := 2*i + 1
+	right := 2*i + 2
+
+	if left < n && arr[largest] < arr[left] {
+		largest = left
+	}
+
+	if right < n && arr[largest] < arr[right] {
+		largest = right
+	}
+
+	if largest != i {
+		arr[i], arr[largest] = arr[largest], arr[i]
+		Heapit(arr, n, largest)
+	}
+
+}
+
+func Heap(arr []int) {
+	n := len(arr)
+
+	for i := n/2 - 1; i >= 0; i-- {
+		Heapit(arr, n, i)
+	}
+
+	for i := n - 1; i > 0; i-- {
+		arr[i], arr[0] = arr[0], arr[i]
+		Heapit(arr, i, 0)
+	}
+
+}
+```
 
 ## A Recursive Approach - Quick Sort
 ### Overview
@@ -167,3 +236,32 @@ is already sorted or nearly sorted. To mitigate this, various techniques like
 randomizing pivot selection or using median-of-three pivot selection can be 
 employed. Overall, quick sort is widely used in practice and serves as a 
 foundational sorting algorithm in many programming languages and libraries.
+
+### Code
+
+```golang
+func Partition(arr []int, low, high int) int {
+
+	pivot := arr[high]
+
+	i := low - 1
+
+	for j := low; j < high; j++ {
+		if arr[j] < pivot {
+			i++
+			arr[i], arr[j] = arr[j], arr[i]
+		}
+	}
+
+	arr[i+1], arr[high] = arr[high], arr[i+1]
+	return i + 1
+}
+
+func Quick(arr []int, low, high int) {
+	if low < high {
+		p := Partition(arr, low, high)
+		Quick(arr, low, p-1)
+		Quick(arr, p+1, high)
+	}
+}
+```
