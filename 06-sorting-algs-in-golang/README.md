@@ -1,4 +1,7 @@
 # DSA In GoLang - Sorting
+## Implementing Some Of The Common Sorting Algos In GoLang
+
+![Thumbnail](./imgs/thumbnail.png)
 
 I'm going to go on a limb and say that you're like me - it's been a while
 since you've took a good hard look at data structures and algorithms (DSA).
@@ -19,9 +22,12 @@ issues becomes blatanly obvious. So, let's do two things today:
 2. Implementing these in GoLang and then running test cases on them
 
 ## A Naive Approach - Bubble Sort
+### Overview
+
 Let's first talk about the algorithm that we all learned at the
 start of our CompSci journey - Bubble Sort!
-Bubble sort is a simple sorting algorithm that 
+
+Bubble Sort is a simple sorting algorithm that 
 repeatedly steps through the list to be sorted, compares each pair of 
 adjacent items, and swaps them if they are in the wrong order. This process 
 is repeated until no swaps are needed, indicating that the list is sorted. 
@@ -36,15 +42,17 @@ Here's a basic outline of how the bubble sort algorithm works:
 4. Continue this process, moving one element to the right each time, until you reach the end of the list.
 5. Repeat steps 1-4 until no more swaps are needed, indicating that the list is sorted.
 
-Bubble sort is not efficient for large lists because its average and worst-case 
+Bubble Sort is not efficient for large lists because its average and worst-case 
 time complexity is O(n^2), where n is the number of elements in the list. 
 However, it's easy to understand and implement, making it useful for 
 educational purposes or for sorting small lists.
 
 ## An Improved Approach - Insertion Sort
+### Overview
+
 Let's moved on to a somewhat improved method - Insertion Sort.
 
-Insertion sort is anoter simple sorting algorithm that 
+Insertion Sort is anoter simple sorting algorithm that 
 builds the final sorted list one item at a time. It 
 works by iteratively taking an unsorted element and inserting 
 it into its correct position within a sorted sublist. Initially, 
@@ -62,15 +70,20 @@ Here's a basic description of how the insertion sort algorithm works:
 5. Insert the current element into its correct position in the sorted sublist.
 6. Repeat steps 2-5 for each remaining unsorted element until the entire list is sorted.
 
-Insertion sort is an efficient algorithm for sorting small lists or lists that are 
+Insertion Sort is an efficient algorithm for sorting small lists or lists that are 
 almost sorted. Its average and worst-case time complexity is O(n^2), 
 where n is the number of elements in the list. However, its best-case time complexity 
 is O(n) when the list is already sorted. Additionally, insertion sort has a 
 space complexity of O(1), making it suitable for situations with limited memory resources.
 
 ## A Data Structure Approach - Heap Sort
+### Overview
 
-Heap sort is a comparison-based sorting algorithm that leverages the properties 
+So we've done bubble and insertion sort. Is there more we can do by possibly
+modifying our thinking and introducing some different data structures into
+the mix? Let's try something new... Heap Sort!
+
+Heap Sort is a comparison-based sorting algorithm that leverages the properties 
 of a binary heap data structure to efficiently sort elements. It consists of 
 two main phases: heap construction and heapification.
 
@@ -93,7 +106,7 @@ two main phases: heap construction and heapification.
     After each iteration, the largest remaining element is placed at the end of the array.
 * The resulting array is sorted in ascending order.
 
-Heap sort has a time complexity of O(n log n) for all cases, where 
+Heap Sort has a time complexity of O(n log n) for all cases, where 
 n is the number of elements in the array. This makes it an efficient 
 sorting algorithm, especially for large datasets. Additionally, heap sort 
 is an in-place algorithm, meaning it does not require additional memory 
@@ -102,8 +115,13 @@ used for temporary storage during the sorting process. However, heap sort is
 not stable, meaning it may change the relative order of elements with equal keys.
 
 ## A Recursive Approach - Quick Sort
+### Overview
 
-Quick sort is a highly efficient sorting algorithm that follows the 
+Now, our approach with Heap Sort was pretty good. But, what are most
+other libraries using as their internal sorting methods? This brings
+us to our final sorting method of the day - Quick Sort.
+
+Quick Sort is a highly efficient sorting algorithm that follows the 
 divide-and-conquer strategy. It works by selecting a 'pivot' element 
 from the array and partitioning the other elements into two sub-arrays 
 according to whether they are less than or greater than the pivot. 
@@ -139,7 +157,7 @@ Here's how quick sort typically works:
 * As the recursive calls return, the sub-arrays are combined 
     into a single sorted array.
 
-Quick sort is generally faster in practice compared to other 
+Quick Sort is generally faster in practice compared to other 
 sorting algorithms for large datasets, primarily due to its in-place 
 partitioning and relatively simple implementation. It typically has an 
 average-case time complexity of O(n log n), making it very efficient. 
