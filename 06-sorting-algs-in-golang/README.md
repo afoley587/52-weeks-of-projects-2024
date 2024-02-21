@@ -19,7 +19,18 @@ issues becomes blatanly obvious. So, let's do two things today:
 2. Implementing these in GoLang and then running test cases on them
 
 ## A Naive Approach - Bubble Sort
-Let's first talk about the first 
+Let's first talk about the algorithm that we all learned in the beginning...
+bubble sort! The main idea of bubble sort is to go through the array from 
+left to right and swap the items until they are sorted. If we look at some 
+pseudo-code for bubble sort, it will look something like:
+
+```shell
+for i := 0 to length [ARR] do
+    for j := 0 to length [ARR] - i - 1 do
+        if A[j] > A[j+1] then
+            Swap(A[j], A[j+1])
+```
+
 
 ## An Improved Approach - Insertion Sort
 ## A Datastructure Approach - Heap Sort
