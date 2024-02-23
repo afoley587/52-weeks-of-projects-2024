@@ -1,0 +1,3 @@
+package chains
+
+func GeneateVacationIdeaChange() {}
