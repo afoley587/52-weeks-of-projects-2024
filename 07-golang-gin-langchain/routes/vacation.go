@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/afoley587/52-weeks-of-projects/07-golang-gin-langchain/chains"
@@ -28,13 +29,19 @@ type GetVacationIdeaResponse struct {
 
 func generateVacation(r GenerateVacationIdeaRequest) GenerateVacationIdeaResponse {
 	// call the chain here
-	return GenerateVacationIdeaResponse{Id: uuid.New(), Completed: false}
+	id := uuid.New()
+	log.Printf("Generating new vacation with ID: %s", id)
+	go chains.GeneateVacationIdeaChange(id)
+	return GenerateVacationIdeaResponse{Id: id, Completed: false}
 }
 
-func getVacation(id uuid.UUID) GetVacationIdeaResponse {
+func getVacation(id uuid.UUID) (GetVacationIdeaResponse, error) {
 	// search the chains here
-	v, _ := chains.GetVacationFromDb(id)
-	return GetVacationIdeaResponse{Id: v.Id, Completed: v.Completed, Idea: v.Idea}
+	v, err := chains.GetVacationFromDb(id)
+	if err != nil {
+		return GetVacationIdeaResponse{}, err
+	}
+	return GetVacationIdeaResponse{Id: v.Id, Completed: v.Completed, Idea: v.Idea}, nil
 }
 
 func GetVacationRouter(router *gin.Engine) *gin.Engine {
@@ -59,9 +66,14 @@ func GetVacationRouter(router *gin.Engine) *gin.Engine {
 				"message": "Bad Request",
 			})
 		} else {
-			resp := getVacation(id)
-			c.JSON(http.StatusOK, resp)
-
+			resp, err := getVacation(id)
+			if err != nil {
+				c.JSON(http.StatusNotFound, gin.H{
+					"message": "Id Not Found",
+				})
+			} else {
+				c.JSON(http.StatusOK, resp)
+			}
 		}
 	})
 	return router
