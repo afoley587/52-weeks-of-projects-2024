@@ -266,5 +266,32 @@ func Quick(arr []int, low, high int) {
 }
 ```
 
+## Running
+
+Let's run these with `go test -bench` (more on benchmarking [here](https://www.practical-go-lessons.com/chap-34-benchmarks)).
+
+If you're curious, each of the files have a test file. We will do a quick
+benchmark using `go test -bench`:
+
+```shell
+$ go test -bench .
+goos: darwin
+goarch: arm64
+pkg: github.com/afoley587/52-weeks-of-projects/06-sorting-algs-in-golang
+BenchmarkBubbleSort-10          1000000000               0.0000041 ns/op
+BenchmarkHeapSort-10            1000000000               0.0000030 ns/op
+BenchmarkInsertionSort-10       1000000000               0.0000030 ns/op
+BenchmarkQuickSort-10           1000000000               0.0000025 ns/op
+PASS
+ok      github.com/afoley587/52-weeks-of-projects/06-sorting-algs-in-golang     0.178s
+$ 
+```
+
+The third column represents `Nanoseconds per operation`. In short,
+it gives you an idea of how fast on average our functions run. We can see that 
+Quick Sort tends to be the fastest over the 1000000000 operations. Now, that
+might not always be the case. ALways remember that different algorithms can
+be more relevant and useful on different sets of data!
+
 I hope you enjoyed following along! As always, all code can always
 be found [here](https://github.com/afoley587/52-weeks-of-projects-2024/tree/main/06-sorting-algs-in-golang) on my GitHub repo!
