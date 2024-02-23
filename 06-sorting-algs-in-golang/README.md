@@ -265,3 +265,6 @@ func Quick(arr []int, low, high int) {
 	}
 }
 ```
+
+I hope you enjoyed following along! As always, all code can always
+be found [here](https://github.com/afoley587/52-weeks-of-projects-2024/tree/main/06-sorting-algs-in-golang) on my GitHub repo!
