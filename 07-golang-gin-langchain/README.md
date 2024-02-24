@@ -444,12 +444,12 @@ finishes.
 In our second terminal, let's see what the LLM thinks we should do: 
 ```shell
 $ curl -X GET -H"Content-type: application/json" \
-    http://localhost:8080/vacation/69a06113-9227-46b6-a274-0d02044acc87
+    http://localhost:8080/vacation/255f732f-4960-439b-93db-58972d076d61
 ```
-Note that the UUID (`69a06113-9227-46b6-a274-0d02044acc87`) will vary between your system and
+Note that the UUID (`255f732f-4960-439b-93db-58972d076d61`) will vary between your system and
 mine!
 
 ![Demo](./images/demo.png)
 
 I hope you liked following along! Please feel free to read all of my code
-[here]() on github!
+[here](https://github.com/afoley587/52-weeks-of-projects-2024/tree/main/07-golang-gin-langchain) on github!
