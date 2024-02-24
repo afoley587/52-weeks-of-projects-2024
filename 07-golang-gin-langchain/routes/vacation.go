@@ -48,23 +48,6 @@ If it does, we will turn the `Vacation` object into a `GetVacationIdeaResponse`
 containing all the releveant data (ID, idea, and whether it's finished or not).
 */
 
-type GenerateVacationIdeaRequest struct {
-	FavoriteSeason string   `json:"favorite_season"`
-	Hobbies        []string `json:"hobbies"`
-	Budget         int      `json:"budget"`
-}
-
-type GenerateVacationIdeaResponse struct {
-	Id        uuid.UUID `json:"id"`
-	Completed bool      `json:"completed"`
-}
-
-type GetVacationIdeaResponse struct {
-	Id        uuid.UUID `json:"id"`
-	Completed bool      `json:"completed"`
-	Idea      string    `json:"idea"`
-}
-
 func generateVacation(r GenerateVacationIdeaRequest) GenerateVacationIdeaResponse {
 	// First, generate a new UUID for the idea
 	id := uuid.New()

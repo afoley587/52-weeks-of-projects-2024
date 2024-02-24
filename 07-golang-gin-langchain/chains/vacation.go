@@ -31,12 +31,6 @@ object. Otherwise, it returns an error if the ID does not exist in the
 database.
 */
 
-type Vacation struct {
-	Id        uuid.UUID `json:"id"`
-	Completed bool      `json:"completed"`
-	Idea      string    `json:"idea"`
-}
-
 var Vacations []*Vacation
 
 func GetVacationFromDb(id uuid.UUID) (Vacation, error) {
