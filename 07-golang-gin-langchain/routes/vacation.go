@@ -10,6 +10,10 @@ import (
 )
 
 /*
+
+Now that our request and response schemas are out
+of the way, we can talk about the router.
+
 The `GetVacationRouter` function takes a gin router
 as input and adds a new router grouping to it with a
 path prefix of `/vacation`. So any endpoints we add to
@@ -38,7 +42,10 @@ for the idea and invoke the langchain chain in a goroutine with
 We will talk about what this chain is doing in the next section but, for now,
 let's just say that it goes and generates a vacation idea with the given parameters.
 After it starts that chain, it returns a `GenerateVacationIdeaResponse` to the
-caller with the ID field set.
+caller with the ID field set. We should also note that it's important to us to
+put this on a goroutine because we want our responses to be snappy. Langchain
+might take a few seconds to generate an actual idea so we don't want clients
+to register things like timeouts when waiting for a response.
 
 How about the GET to `/:id`? Well, this one's a bit simpler. It also first
 validates the request by making sure that the ID is a valid UUID. It then goes

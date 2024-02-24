@@ -17,9 +17,9 @@ import (
 )
 
 /*
-First, we instantiate a new application and we just
-attach the router to it. All of the `/vacation/` endpoints
-will be automatically added to our app.
+Now we can add our routes to our API. Gin makes this very simple.
+We just have to instantiate a Gin engine, add our routes to it, and then
+run the engine.
 */
 
 func main() {
