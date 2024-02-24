@@ -3,7 +3,7 @@ package chains
 import "github.com/google/uuid"
 
 /*
-Our vacation struct will just be data holder.
+Our `Vacation` struct will just be data holder.
 It holds the in-process and final vacation objects.
 It has the same fields as the `GetVacationIdeaResponse`
 we talked about earlier but I prefer to separate them
