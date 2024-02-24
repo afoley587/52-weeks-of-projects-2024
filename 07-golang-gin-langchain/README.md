@@ -273,7 +273,12 @@ Let's define a "database" to store all of the generated ideas.
 `Vacations` is our vacation "database". I say database in
 quotes because this is just a map that is shared across this package.
 Ideally, this would be some more persistent/stable/scalable form of storage
-but, for the purpose of this conversation, a map is perfect.
+but, for the purpose of this conversation, a map is perfect. `Vacations`
+will be a slice of `Vacation` structs. Our `Vacation` struct will just be data holder.
+It holds the in-process and final vacation objects.
+It has the same fields as the `GetVacationIdeaResponse`
+we talked about earlier but I prefer to separate them
+so it's easier to decouple these pieces of code.
 
 We need to provide two methods to whoever wants to use this package:
 
