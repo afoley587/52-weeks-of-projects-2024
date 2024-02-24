@@ -14,6 +14,10 @@ import (
 )
 
 /*
+The scene has been set with the API. Now, we need a way
+to converse with our LLM (or at least as it questions).
+
+Let's define a "database" to store all of the generated ideas.
 `Vacations` is our vacation "database". I say database in
 quotes because this is just a map that is shared across this package.
 Ideally, this would be some more persistent/stable/scalable form of storage
@@ -29,6 +33,37 @@ function. This function will take the ID of the vacation. It then tries
 to find the vacation in the map and, if it exists, it returns the vacation
 object. Otherwise, it returns an error if the ID does not exist in the
 database.
+
+Next, we need something to actually create ideas and store them into our
+database.
+
+`GeneateVacationIdeaChange` is where we finally start to invoke langchain.
+It takes a few parameters:
+
+1. The UUID which was passed in from our router. We will use this to save the
+    results in our vacation database.
+2. The users preferred season. We will use that as a parameter to the langchain chain.
+3. The users favorite hobbies. We will use that as a parameter to the langchain chain.
+4. The users financial budget. We will use that as a parameter to the langchain chain.
+
+First, we need to instantiate our LLM model (openai in this case). Then
+we need to create a few prompts. We create a system prompt to pass to the LLM. A
+A system prompt is an instruction or information provided by the application or
+system to guide the conversation. The system prompt helps set the context and
+instructions for the LLM and will guide how it responds to the human prompt.
+
+A human message and template follows the same idea. We can think of this like a
+chat application. The system prompt helps set up the chatbot.
+The human prompt is what the user would ask it.
+
+Now that the templates are established, we can create a chat prompt from them
+by first creating a chat prompt template. To do this, we use the `FormatMessages` method
+to then insert our user-provided values into our templates. Now everything is
+templated in string format. We will create LLM message contents which is what our
+llm will expect as input. Finally, we can invoke our LLM with `GenerateContent`.
+The output of `GenerateContent` will the result from the OpenAI API but, we only
+care about the content that the LLM generated. The content is the string response
+that would be returned to you in something like the ChatGPT window.
 */
 
 var Vacations []*Vacation
