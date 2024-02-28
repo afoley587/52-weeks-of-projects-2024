@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - monitors.engineeringwithalex.io
+  resources:
+  - pings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitors.engineeringwithalex.io
+  resources:
+  - pings/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - monitors.engineeringwithalex.io
+  resources:
+  - pings/status
+  verbs:
+  - get
+  - patch
+  - update

@@ -1,0 +1,31 @@
+# permissions for end users to edit pings.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: ping-editor-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: ping-operator
+    app.kubernetes.io/part-of: ping-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: ping-editor-role
+rules:
+- apiGroups:
+  - monitors.engineeringwithalex.io
+  resources:
+  - pings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - monitors.engineeringwithalex.io
+  resources:
+  - pings/status
+  verbs:
+  - get

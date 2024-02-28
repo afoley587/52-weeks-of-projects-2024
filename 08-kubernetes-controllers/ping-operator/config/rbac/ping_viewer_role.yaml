@@ -1,0 +1,27 @@
+# permissions for end users to view pings.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: ping-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: ping-operator
+    app.kubernetes.io/part-of: ping-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: ping-viewer-role
+rules:
+- apiGroups:
+  - monitors.engineeringwithalex.io
+  resources:
+  - pings
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - monitors.engineeringwithalex.io
+  resources:
+  - pings/status
+  verbs:
+  - get
