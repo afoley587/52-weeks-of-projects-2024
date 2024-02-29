@@ -1,17 +1,104 @@
-## 
-minikube start --cpus=2 --memory=2048
-## IDEA: make a controller which sends pings to certain places
+# Building A Custom Kubernetes Operator
+## How The Operator-SDK Makes It Wicked Easy
 
+If you're in the kubernetes space, either professionally or personally, 
+you've probably heard of the term `operator` or `controller`. You've 
+probably heard people say "Install <XYZ> with the operator" or 
+"I just built a custom controller to do <ABC>". What does that really mean?
+Well, let's first start with some basics.
 
-https://sdk.operatorframework.io/docs/installation/
+## Operators Vs Controllers
+There's a lot of confusion vs what is a controller and what is an operator.
+To be a bit brief about it, in my opinion, operators are a specialized 
+controller. They try to embody more workload-specific knowledge into
+the controller. 
 
+So, next question, what's a controller? Well, when you create some kubernetes
+object, you say "This is my desired state". If we make a Deployment object and
+set the number of replicas to 3, we are telling the replica set controller to
+watch this object and ensure there are always 3 pods running to service the
+deployment's requested state. The process that controllers use to do this
+is something called reconciliation (keep this in mind for later). In short, 
+controllers use a reconciliation process to make sure our desired state is 
+always met.
+
+So, what graduates a controller to an operator? Well, there's a good bit
+of debate and discussion on that:
+
+1. Here is one of many [GitHub discussions](https://github.com/kubeflow/training-operator/issues/300)
+2. A blog on [controller vs operators](https://joshrosso.com/docs/2019/2019-10-13-controllers-and-operators/)
+3. It's even made its way to [StackOverflow](https://stackoverflow.com/questions/47848258/what-is-the-difference-between-a-kubernetes-controller-and-a-kubernetes-operator)
+
+In our case, we will say that a controller becomes an operator when it 
+satisfies the criteria from number 2 above (Credit to https://joshrosso.com):
+
+1. Contains workload-specific knowledge
+2. Manages workload lifecycle
+3. Offers a CRD
+
+I believe that what we're building today matches that criteria...
+so let's say we're building an operator today!
+
+## Operator-SDK
+
+To build out our operator, we will be using the 
+[operator-sdk](https://sdk.operatorframework.io/). This SDK does a lot
+of the heavy lifting for us and includes a good bit of skeleton code
+for our operators/controllers. It provides utilities to then generate
+your CRD's from your source code, install resources into your cluster,
+and run/test the operators. Installation is easy. If you're like me (and
+on a mac), you can install with [homebrew](https://brew.sh/):
+
+```shell
 $ brew install operator-sdk
 $ operator-sdk version
 operator-sdk version: "v1.31.0", commit: "e67da35ef4fff3e471a208904b2a142b27ae32b1", kubernetes version: "v1.26.0", go version: "go1.20.6", GOOS: "darwin", GOARCH: "arm64"
-mkdir ping-operator && cd ping-operator
+```
+
+However, they support a bunch of different installation methods described
+[here](https://sdk.operatorframework.io/docs/installation/) in their documentation.
+
+## Setting Up Our Environment
+We will be using [minikube](https://minikube.sigs.k8s.io/docs/start/) 
+as our local development environment. If you don't have it installed, 
+follow the link above to download/install it. Let's now start our
+minikube cluster:
+
+```shell
+$ minikube start --cpus=2 --memory=2048
+```
 
 
-operator-sdk init --domain=engineeringwithalex.io --repo=github.com/afoley587/52-weeks-of-projects-2023/08-kubernetes-controllers/ping-operator
+
+## Our Project
+So, what are we really building today? Well, we're going to build an operator
+which responds to certain custom resource definitions (CRDs). Our CRDs will
+define ping checks to be sent out to a hostname with a certain number of attempts.
+In short, we will write an operator to:
+
+1. Create a Kubernetes job when a new object of type `Ping` is requested
+2. This job will run `ping -c <number_of_attempts> <hostname>`
+
+The steps in making this happen are as following:
+
+1. Use the Operator SDK to create a new project for us
+2. Use the Operator SDK to create new CRD and operator skeletons for us
+3. Define our Kubernetes CRD Schema
+4. Define our reconciliation logic
+5. Use the Operator SDK to build and deploy our CRDs and operator
+
+## 1. Use the Operator SDK to create a new project for us
+
+Let's first start by creating a new directory for our operators workspace 
+and then use `operator-sdk init` to initialize our go workspace and download
+any dependencies:
+
+```shell
+$ mkdir ping-operator && cd ping-operator
+$ # Change your domain / repo accordingly!
+$ operator-sdk init \
+    --domain=engineeringwithalex.io \
+    --repo=github.com/afoley587/52-weeks-of-projects-2023/08-kubernetes-controllers/ping-operator
 WARN[0000] the platform of this environment (darwin/arm64) is not suppported by kustomize v3 (v3.8.7) which is used in this scaffold. You will be unable to download a binary for the kustomize version supported and used by this plugin. The currently supported platforms are: ["linux/amd64" "linux/arm64" "darwin/amd64"] 
 Writing kustomize manifests for you to edit...
 Writing scaffold for you to edit...
@@ -28,52 +115,30 @@ go: downloading sigs.k8s.io/structured-merge-diff/v4 v4.2.3
 go: downloading github.com/google/gofuzz v1.1.0
 go: downloading github.com/evanphx/json-patch/v5 v5.6.0
 go: downloading gomodules.xyz/jsonpatch/v2 v2.2.0
-go: downloading k8s.io/api v0.26.0
-go: downloading k8s.io/apiextensions-apiserver v0.26.0
-go: downloading github.com/prometheus/client_model v0.3.0
-go: downloading sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2
-go: downloading golang.org/x/net v0.3.1-0.20221206200815-1e63c2f08a10
-go: downloading github.com/imdario/mergo v0.3.6
-go: downloading github.com/evanphx/json-patch v4.12.0+incompatible
-go: downloading golang.org/x/term v0.3.0
-go: downloading gopkg.in/inf.v0 v0.9.1
-go: downloading sigs.k8s.io/yaml v1.3.0
-go: downloading github.com/google/gnostic v0.5.7-v3refs
-go: downloading k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280
-go: downloading github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
-go: downloading github.com/google/uuid v1.1.2
-go: downloading github.com/cespare/xxhash/v2 v2.1.2
-go: downloading golang.org/x/sys v0.3.0
-go: downloading google.golang.org/protobuf v1.28.1
-go: downloading github.com/fsnotify/fsnotify v1.6.0
-go: downloading github.com/matttproud/golang_protobuf_extensions v1.0.2
-go: downloading golang.org/x/oauth2 v0.0.0-20220223155221-ee480838109b
-go: downloading github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
-go: downloading golang.org/x/text v0.5.0
-go: downloading github.com/emicklei/go-restful/v3 v3.9.0
-go: downloading github.com/go-openapi/swag v0.19.14
-go: downloading github.com/go-openapi/jsonreference v0.20.0
-go: downloading google.golang.org/appengine v1.6.7
-go: downloading github.com/go-openapi/jsonpointer v0.19.5
-go: downloading github.com/mailru/easyjson v0.7.6
-go: downloading github.com/josharian/intern v1.0.0
-Update dependencies:
-$ go mod tidy
-go: downloading github.com/go-logr/zapr v1.2.3
-go: downloading go.uber.org/zap v1.24.0
-go: downloading github.com/stretchr/testify v1.8.0
-go: downloading github.com/onsi/ginkgo/v2 v2.6.0
-go: downloading github.com/onsi/gomega v1.24.1
-go: downloading gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
-go: downloading go.uber.org/atomic v1.7.0
-go: downloading go.uber.org/multierr v1.6.0
-go: downloading github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
-go: downloading github.com/benbjohnson/clock v1.1.0
+.
+.
+.
+.
 Next: define a resource with:
 $ operator-sdk create api
+```
 
-operator-sdk create api --group monitors --version v1beta1 --kind Ping --namespaced --controller --resource --make
+## Use the Operator SDK to create new CRD and operator skeletons for us
 
+```shell
+$ operator-sdk create api \
+    --group monitors \
+    --version v1beta1 \
+    --kind Ping \
+    --namespaced \
+    --controller \
+    --resource \
+    --make
+```
+
+## 3. Define our Kubernetes CRD Schema
+## 4. Define our reconciliation logic
+## 5. Use the Operator SDK to build and deploy our CRDs and operator
 ## make cahnges in ping_types.go
 
 ## make changes to reconcile
