@@ -125,6 +125,27 @@ $ operator-sdk create api
 
 ## Use the Operator SDK to create new CRD and operator skeletons for us
 
+We will be creating a new API for kubernetes to use. To do that, we need a few
+pieces of information:
+
+* API Group
+* API Version
+* Kind
+
+If we look at the stateful set example, the group is `apps`, the
+version is `v1`, and the kind is `StatefulSet`. This is how Kubernetes
+will organize the API that we are adding.
+
+```yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ...
+  namespace: ...
+```
+
+So, let's create our API:
+
 ```shell
 $ operator-sdk create api \
     --group monitors \
@@ -134,7 +155,45 @@ $ operator-sdk create api \
     --controller \
     --resource \
     --make
+Writing kustomize manifests for you to edit...
+Writing scaffold for you to edit...
+api/v1beta1/ping_types.go
+controllers/ping_controller.go
+Update dependencies:
+$ go mod tidy
+Running make:
+$ make generate
+mkdir -p ...
+test -s .../controller-gen && .../controller-gen --version | grep -q v0.11.1 || \
+        GOBIN=... go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.1
+.../controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
+Next: implement your new API and generate the manifests (e.g. CRDs,CRs) with:
+$ make manifests
 ```
+
+With the above command, we asked the operator SDK to make us a new API with
+the following flags:
+
+* `--group monitors` - Set the API group to `monitors`
+* `--version v1beta1` - Set the API version to `v1beta1`
+* `--kind monitors` - Create a new object of kind `Ping`
+* `--namespaced` - This resource will be namespaced
+* `--controller` - Generate the controller without prompting us
+* `--resource` - Generate the resource without prompting us
+* `--make` - Run make generate after generating files
+
+Let's do an `ls` on a few directories to get a better handle on what happened:
+
+```shell
+$ ls api/v1beta1
+groupversion_info.go  ping_types.go  zz_generated.deepcopy.go
+$ ls controllers 
+ping_controller.go  suite_test.go
+```
+
+Wow - the `operator-sdk` went and created a ton of files for us. Of particular
+importance are `api/v1beta1/ping_types.go` where we will specifiy our CRD schema
+and `controllers/ping_controller.go` where we will define our reconciliation logic!
 
 ## 3. Define our Kubernetes CRD Schema
 ## 4. Define our reconciliation logic
