@@ -366,6 +366,121 @@ spec:
 ```
 
 ## 4. Define our reconciliation logic
+
+Our schemas and CRDs are now out of the way. But, what should
+the operator do when we request a new one of these? For example, 
+if I applied the yaml for a `Ping` resource - what should the operator
+do? Enter the `Reconcile` function. 
+
+The code for this lives in the `controllers/ping_controller.go` file. The
+`operator-sdk` made us a nice skeleton:
+
+```golang
+func (r *PingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+        _ = log.FromContext(ctx)
+
+        // TODO(user): your logic here
+
+        return ctrl.Result{}, nil
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *PingReconciler) SetupWithManager(mgr ctrl.Manager) error {
+        return ctrl.NewControllerManagedBy(mgr).
+                For(&monitorsv1beta1.Ping{}).
+                Complete(r)
+}
+```
+
+But that won't do much for us. This `Reconcile` method is called 
+whenever a `Ping` resource is created, updated, or deleted. 
+A bunch of user data, such as name and namespace, are
+then passed to this function as a `ctrl.Request`. Now, as previously noted,
+when a user requests a `Ping` resource, we want our controller to spin up a new
+kubernetes job to handle that request. Our function becomes:
+
+```golang
+func (r *PingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	_ = log.FromContext(ctx)
+
+	// TODO(user): your logic here
+	var ping monitorsv1beta1.Ping
+
+	if err := r.Get(ctx, req.NamespacedName, &ping); err != nil {
+		log.FromContext(ctx).Error(err, "Unable to fetch Ping")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	job, err := r.BuildJob(ping)
+
+	if err != nil {
+		log.FromContext(ctx).Error(err, "Unable to get job definition")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	if err := r.Create(ctx, &job); err != nil {
+		log.FromContext(ctx).Error(err, "Unable to create job")
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	return ctrl.Result{}, nil
+}
+```
+
+We first try to get the `Ping` object from the kubernetes API. If, for example, 
+resource type didn't exist (i.e. CRDs were never applied), this would throw an
+error. We wouldn't be able to handle the request in that case. Next, we call
+this custom `BuildJob` function. From a high level, `BuildJob` will build the 
+kuberetes job definition for us (see below). The definition is then returned to
+the `Reconcile` function, who applies and deploys this job. If the job deployment
+fails, we again return an error. 
+
+So, what's `BuildJob`? It's definition is below:
+
+```golang
+func (r *PingReconciler) BuildJob(ping monitorsv1beta1.Ping) (batchv1.Job, error) {
+	attempts := "-c" + strconv.Itoa(ping.Spec.Attempts)
+	host := ping.Spec.Hostname
+	j := batchv1.Job{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: batchv1.SchemeGroupVersion.String(),
+			Kind:       "Job",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ping.Name + "-job",
+			Namespace: ping.Namespace,
+		},
+		Spec: batchv1.JobSpec{
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					RestartPolicy: corev1.RestartPolicyNever,
+					Containers: []corev1.Container{
+						{
+							Name:    "ping",
+							Image:   "bash",
+							Command: []string{"/bin/ping"},
+							Args:    []string{attempts, host},
+						},
+					},
+				},
+			},
+		},
+	}
+	return j, nil
+}
+```
+
+First, we pull the spec arguments (hostname and attempts) from the `Ping`
+resource that the `Reconcile` function got from the kubernetes API. We then
+create a new job. We will give it the name of `<name of ping>-job` and we will
+add a new container to it. The container will run the `bash` docker image with 
+the command of `/bin/ping` and arguments `-c<number of attempts> <hostname>`.
+So, when the `Reconcile` function builds this, we would expect to see a new
+job get created. That job should create one pod which issues the ping command.
+
+Note: We aren't implementing any [finalizers](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/).
+So, if you deploy the same `Ping` resource twice, you'll see some errors about
+duplicate resources!
+
 ## 5. Use the Operator SDK to build and deploy our CRDs and operator
 ## make cahnges in ping_types.go
 
