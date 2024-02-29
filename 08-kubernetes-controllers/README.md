@@ -196,6 +196,175 @@ importance are `api/v1beta1/ping_types.go` where we will specifiy our CRD schema
 and `controllers/ping_controller.go` where we will define our reconciliation logic!
 
 ## 3. Define our Kubernetes CRD Schema
+
+As mentioned above, our CRD schema will go into `api/v1beta1/ping_types.go`.
+
+If you look in the default file, you will see something that looks like this:
+
+```golang
+// PingSpec defines the desired state of Ping
+type PingSpec struct {
+        // INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+        // Important: Run "make" to regenerate code after modifying this file
+
+        // Foo is an example field of Ping. Edit ping_types.go to remove/update
+        Foo string `json:"foo,omitempty"`
+}
+
+// PingStatus defines the observed state of Ping
+type PingStatus struct {
+        // INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+        // Important: Run "make" to regenerate code after modifying this file
+}
+
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+
+// Ping is the Schema for the pings API
+type Ping struct {
+        metav1.TypeMeta   `json:",inline"`
+        metav1.ObjectMeta `json:"metadata,omitempty"`
+
+        Spec   PingSpec   `json:"spec,omitempty"`
+        Status PingStatus `json:"status,omitempty"`
+}
+```
+
+This is the default setup for new resources. It's bare! For the sake
+of this post, we will only be updating the `PingSpec` and not the `PingStatus`.
+
+So, from a high-level, what is `PingSpec`, `PingStatus`, and `Ping`? Well, 
+`PingSpec` is the specification that users need to define when requesting 
+a `Ping` object. Let's look at an example for a pod:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec: ### THIS STARTS THE SPEC!
+  containers:
+  - name: nginx
+    image: nginx:1.14.2
+    ports:
+    - containerPort: 80
+```
+
+We can see that the pod spec has `containers` which, in itself, has another
+schema. We won't be nesting any objects in our CRD. Again, we just want the user
+to be able to define the hostname to send a ping to and the number of attempts
+that the ping should perform. So, a user should be able to do something like:
+
+```yaml
+apiVersion: monitors.engineeringwithalex.io/v1beta1
+kind: Ping
+metadata:
+  labels:
+    app.kubernetes.io/name: ping
+    app.kubernetes.io/instance: ping-sample
+    app.kubernetes.io/part-of: ping-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ping-operator
+  name: ping-sample
+spec: ### THIS STARTS THE SPEC!
+  hostname: "www.google.com"
+  attempts: 1
+```
+
+To accomplish that, we need to update our Go code:
+
+```golang
+type PingSpec struct {
+	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+
+	/**
+	Need to add the Hostname to the spec
+	**/
+	Hostname string `json:"hostname,omitempty"`
+	Attempts int    `json:"attempts,omitempty"`
+}
+```
+
+This adds a string for `hostname` and an integer for `attempts`.
+
+The `PingStatus` would report the status of the object. Again, we won't
+be updating that here, but it might include some data about your ping such
+as:
+
+* Was the ping successful?
+* Is the job finished?
+* etc.
+
+Finally, the `Ping` object combines everything. It combines the basic type
+metadata (such as group, API version, and kind), the object metadata (such as name, 
+namespace, etc.), the `PingSpec`, and the `PingStatus`!
+
+At this point, we can run `make manifests` command:
+
+```shell
+$ make manifests
+test -s ...08-kubernetes-controllers/ping-operator/bin/controller-gen && ...08-kubernetes-controllers/ping-operator/bin/controller-gen --version | grep -q v0.11.1 || \
+        GOBIN=...08-kubernetes-controllers/ping-operator/bin go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.1
+...08-kubernetes-controllers/ping-operator/bin/controller-gen rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+```
+
+We should now see some manifests in `config/crd/bases`:
+
+```yaml
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.11.1
+  creationTimestamp: null
+  name: pings.monitors.engineeringwithalex.io
+spec:
+  group: monitors.engineeringwithalex.io
+  names:
+    kind: Ping
+    listKind: PingList
+    plural: pings
+    singular: ping
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: Ping is the Schema for the pings API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: PingSpec defines the desired state of Ping
+            properties:
+              attempts:
+                type: integer
+              hostname:
+                description: '* Need to add the Hostname to the spec *'
+                type: string
+            type: object
+          status:
+            description: PingStatus defines the observed state of Ping
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+```
+
 ## 4. Define our reconciliation logic
 ## 5. Use the Operator SDK to build and deploy our CRDs and operator
 ## make cahnges in ping_types.go
