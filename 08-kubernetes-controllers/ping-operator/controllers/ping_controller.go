@@ -57,19 +57,19 @@ func (r *PingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	var ping monitorsv1beta1.Ping
 
 	if err := r.Get(ctx, req.NamespacedName, &ping); err != nil {
-		log.Log.Error(err, "Unable to fetch Ping")
+		log.FromContext(ctx).Error(err, "Unable to fetch Ping")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	job, err := r.BuildJob(ping)
 
 	if err != nil {
-		log.Log.Error(err, "Unable to get job definition")
+		log.FromContext(ctx).Error(err, "Unable to get job definition")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if err := r.Create(ctx, &job); err != nil {
-		log.Log.Error(err, "Unable to create job")
+		log.FromContext(ctx).Error(err, "Unable to create job")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	return ctrl.Result{}, nil
