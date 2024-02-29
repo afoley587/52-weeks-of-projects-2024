@@ -1,6 +1,8 @@
 # Building A Custom Kubernetes Operator
 ## How The Operator-SDK Makes It Wicked Easy
 
+![Thumbnail](./images/thumbnail.png)
+
 If you're in the kubernetes space, either professionally or personally, 
 you've probably heard of the term `operator` or `controller`. You've 
 probably heard people say "Install <XYZ> with the operator" or 
