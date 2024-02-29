@@ -482,11 +482,84 @@ So, if you deploy the same `Ping` resource twice, you'll see some errors about
 duplicate resources!
 
 ## 5. Use the Operator SDK to build and deploy our CRDs and operator
-## make cahnges in ping_types.go
+All of the heavy listing is done now! Let's use the `Makefile` provided
+by the `operator-sdk` to build and deploy our manifests and operator!
 
-## make changes to reconcile
+```shell
+$ make manifests                     
+test -s ...08-kubernetes-controllers/ping-operator/bin/controller-gen && ...08-kubernetes-controllers/ping-operator/bin/controller-gen --version | grep -q v0.11.1 || \
+        GOBIN=...08-kubernetes-controllers/ping-operator/bin go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.1
+...08-kubernetes-controllers/ping-operator/bin/controller-gen rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+$ make install
+test -s ...08-kubernetes-controllers/ping-operator/bin/controller-gen && ...08-kubernetes-controllers/ping-operator/bin/controller-gen --version | grep -q v0.11.1 || \
+        GOBIN=...08-kubernetes-controllers/ping-operator/bin go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.1
+...08-kubernetes-controllers/ping-operator/bin/controller-gen rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+...08-kubernetes-controllers/ping-operator/bin/kustomize build config/crd | kubectl apply -f -
+customresourcedefinition.apiextensions.k8s.io/pings.monitors.engineeringwithalex.io unchanged
+$ make run
+test -s ...08-kubernetes-controllers/ping-operator/bin/controller-gen && ...08-kubernetes-controllers/ping-operator/bin/controller-gen --version | grep -q v0.11.1 || \
+        GOBIN=...08-kubernetes-controllers/ping-operator/bin go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.11.1
+...08-kubernetes-controllers/ping-operator/bin/controller-gen rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+...08-kubernetes-controllers/ping-operator/bin/controller-gen object:headerFile="hack/boilerplate.go.txt" paths="./..."
+go fmt ./...
+go vet ./...
+go run ./main.go
+2024-02-29T15:15:56-07:00       INFO    controller-runtime.metrics      Metrics server is starting to listen    {"addr": ":8080"}
+2024-02-29T15:15:56-07:00       INFO    setup   starting manager
+2024-02-29T15:15:56-07:00       INFO    Starting server {"path": "/metrics", "kind": "metrics", "addr": "[::]:8080"}
+2024-02-29T15:15:56-07:00       INFO    Starting server {"kind": "health probe", "addr": "[::]:8081"}
+2024-02-29T15:15:56-07:00       INFO    Starting EventSource    {"controller": "ping", "controllerGroup": "monitors.engineeringwithalex.io", "controllerKind": "Ping", "source": "kind source: *v1beta1.Ping"}
+2024-02-29T15:15:56-07:00       INFO    Starting Controller     {"controller": "ping", "controllerGroup": "monitors.engineeringwithalex.io", "controllerKind": "Ping"}
+2024-02-29T15:15:56-07:00       INFO    Starting workers        {"controller": "ping", "controllerGroup": "monitors.engineeringwithalex.io", "controllerKind": "Ping", "worker count": 1}
+```
 
-make manifests
-make install
-make run
+In another terminal, let's apply a kubernetes manifest to see how our operator
+reacts:
 
+```shell
+$ kubectl apply -f - <<EOF
+apiVersion: monitors.engineeringwithalex.io/v1beta1
+kind: Ping
+metadata:
+  labels:
+    app.kubernetes.io/name: ping
+    app.kubernetes.io/instance: ping-sample
+    app.kubernetes.io/part-of: ping-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ping-operator
+  name: ping-sample
+spec:
+  hostname: "www.google.com"
+  attempts: 1
+EOF
+ping.monitors.engineeringwithalex.io/ping-sample created
+```
+
+And now we can check on that object!
+
+```shell
+# First, let's look at the Ping object
+$ kubectl get Ping
+NAME          AGE
+ping-sample   26s
+# Let's look at the job it made
+$ kubectl get job
+NAME              COMPLETIONS   DURATION   AGE
+ping-sample-job   1/1           6s         33s
+# Let's look at the pod that the job made
+$ kubectl get pod
+NAME                    READY   STATUS      RESTARTS   AGE
+ping-sample-job-hk6kq   0/1     Completed   0          42s
+# Let's read the pod logs
+$ kubectl logs ping-sample-job-hk6kq
+PING www.google.com (142.250.72.4): 56 data bytes
+64 bytes from 142.250.72.4: seq=0 ttl=62 time=18.363 ms
+
+--- www.google.com ping statistics ---
+1 packets transmitted, 1 packets received, 0% packet loss
+round-trip min/avg/max = 18.363/18.363/18.363 ms
+```
+
+Here's an image for a condensed format!
+
+![Demo](./images/demo.png)
