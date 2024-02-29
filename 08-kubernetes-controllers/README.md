@@ -276,6 +276,7 @@ spec: ### THIS STARTS THE SPEC!
 To accomplish that, we need to update our Go code:
 
 ```golang
+// PingSpec defines the desired state of Ping
 type PingSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -285,6 +286,24 @@ type PingSpec struct {
 	**/
 	Hostname string `json:"hostname,omitempty"`
 	Attempts int    `json:"attempts,omitempty"`
+}
+
+// PingStatus defines the observed state of Ping
+type PingStatus struct {
+	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+	// Important: Run "make" to regenerate code after modifying this file
+}
+
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+
+// Ping is the Schema for the pings API
+type Ping struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   PingSpec   `json:"spec,omitempty"`
+	Status PingStatus `json:"status,omitempty"`
 }
 ```
 
@@ -378,6 +397,15 @@ The code for this lives in the `controllers/ping_controller.go` file. The
 `operator-sdk` made us a nice skeleton:
 
 ```golang
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+// TODO(user): Modify the Reconcile function to compare the state specified by
+// the Ping object against the actual cluster state, and then
+// perform operations to make the cluster state reflect the state specified by
+// the user.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *PingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
         _ = log.FromContext(ctx)
 
@@ -402,6 +430,15 @@ when a user requests a `Ping` resource, we want our controller to spin up a new
 kubernetes job to handle that request. Our function becomes:
 
 ```golang
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+// TODO(user): Modify the Reconcile function to compare the state specified by
+// the Ping object against the actual cluster state, and then
+// perform operations to make the cluster state reflect the state specified by
+// the user.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
 func (r *PingReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
@@ -565,3 +602,13 @@ round-trip min/avg/max = 18.363/18.363/18.363 ms
 Here's an image for a condensed format!
 
 ![Demo](./images/demo.png)
+
+
+I hope you liked following along! As always, all code can be found
+[here](https://github.com/afoley587/52-weeks-of-projects-2024/tree/main/08-kubernetes-controllers) on GitHub.
+
+## References
+
+* [OperatorSDK](https://sdk.operatorframework.io/)
+* [Controllers Vs Operators](https://joshrosso.com/docs/2019/2019-10-13-controllers-and-operators/)
+* [Building A Controller](https://kubernetes.io/blog/2021/06/21/writing-a-controller-for-pod-labels/)
