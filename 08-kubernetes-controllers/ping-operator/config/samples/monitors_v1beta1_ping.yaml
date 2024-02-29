@@ -1,0 +1,13 @@
+apiVersion: monitors.engineeringwithalex.io/v1beta1
+kind: Ping
+metadata:
+  labels:
+    app.kubernetes.io/name: ping
+    app.kubernetes.io/instance: ping-sample
+    app.kubernetes.io/part-of: ping-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: ping-operator
+  name: ping-sample
+spec:
+  hostname: "www.google.com"
+  attempts: 1
