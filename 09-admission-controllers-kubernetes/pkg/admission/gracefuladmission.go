@@ -69,7 +69,7 @@ func Validate(p *corev1.Pod) (ValidationResult, error) {
 func MutatePatch(p *corev1.Pod) ([]PatchOp, error) {
 	defTgps := 60
 	defPreStop := &corev1.LifecycleHandler{Sleep: &corev1.SleepAction{Seconds: 10}}
-	patches := []PathOp
+	var patches []PatchOp
 
 	if p.Spec.TerminationGracePeriodSeconds == nil {
 		patches = append(patches, PatchOp{Op: "add", Path: "", Value: defTgps})
