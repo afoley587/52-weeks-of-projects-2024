@@ -31,7 +31,7 @@ func ServeValidate(c *gin.Context) {
 	req, err := rawToAdmissionReview(c)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"message": "Bad Request",
 		})
 		return
@@ -53,7 +53,7 @@ func ServeMutate(c *gin.Context) {
 	req, err := rawToAdmissionReview(c)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
 			"message": "Bad Request",
 		})
 		return
