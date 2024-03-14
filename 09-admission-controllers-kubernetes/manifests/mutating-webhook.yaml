@@ -1,0 +1,24 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: enforce-graceful-shutdown
+webhooks:
+  - name: enforce-graceful-shutdown.default.svc.cluster.local
+    admissionReviewVersions:
+      - "v1beta1"
+    sideEffects: "None"
+    timeoutSeconds: 30
+    objectSelector:
+      matchLabels:
+        enforce-graceful-shutdown: "enabled"
+    clientConfig:
+      service:
+        name: enforce-graceful-shutdown
+        namespace: default
+        path: "/mutate"
+      caBundle: "..."
+    rules:
+      - operations: [ "CREATE" ]
+        apiGroups: [""]
+        apiVersions: ["v1"]
+        resources: ["pods"]

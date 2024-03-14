@@ -4,17 +4,23 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/afoley587/52-weeks-of-projects/09-admission-controllers-kubernetes/admission"
 )
 
 func ServeValidate(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"message": "validate",
-	})
+	g := admission.GracefulAdmissionHandler{}
+	review, err := g.Validate()
+	// c.JSON(200, gin.H{
+	// 	"message": "validate",
+	// })
 }
 func ServeMutate(c *gin.Context) {
-	c.JSON(200, gin.H{
-		"message": "mutate",
-	})
+	g := admission.GracefulAdmissionHandler{}
+	review, err := g.Mutate()
+	// c.JSON(200, gin.H{
+	// 	"message": "mutate",
+	// })
 }
 
 func main() {
