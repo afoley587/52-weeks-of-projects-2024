@@ -1,1 +1,26 @@
 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: enforce-graceful-shutdown
+  name: enforce-graceful-shutdown
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: enforce-graceful-shutdown
+  template:
+    metadata:
+      labels:
+        app: enforce-graceful-shutdown
+    spec:
+      containers:
+        - image: admission
+          name: admission
+          resources: {}
+          imagePullPolicy: Never
+          ports:
+            - containerPort: '...'
+              name: https

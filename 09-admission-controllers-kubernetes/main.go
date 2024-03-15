@@ -31,8 +31,8 @@ func ServeValidate(c *gin.Context) {
 	req, err := rawToAdmissionReview(c)
 
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{
-			"message": "Bad Request",
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Unprocessable",
 		})
 		return
 	}
@@ -53,8 +53,8 @@ func ServeMutate(c *gin.Context) {
 	req, err := rawToAdmissionReview(c)
 
 	if err != nil {
-		c.JSON(http.StatusUnprocessableEntity, gin.H{
-			"message": "Bad Request",
+		c.JSON(http.StatusBadRequest, gin.H{
+			"message": "Unprocessable",
 		})
 		return
 	}
@@ -72,9 +72,13 @@ func ServeMutate(c *gin.Context) {
 }
 
 func main() {
-	log.Println("running...")
 	r := gin.Default()
 	r.GET("/validate", ServeValidate)
 	r.GET("/mutate", ServeMutate)
-	r.Run() // listen and serve on 0.0.0.0:8080
+
+	// change for k8s
+	cert := "certs/server.crt"
+	key := "certs/server.key"
+
+	log.Fatal(http.ListenAndServeTLS(":443", cert, key, r))
 }
